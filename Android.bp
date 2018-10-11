@@ -42,6 +42,10 @@ cc_binary_host {
         "grpc/src/compiler/go_generator.cc",
     ],
 
+    cppflags: [
+        "-Wno-implicit-fallthrough",
+    ],
+
     local_include_dirs: [
         "grpc",
         "include",
