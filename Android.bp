@@ -28,6 +28,7 @@ cc_binary_host {
         "-Werror",
         "-Wextra",
         "-Werror=shadow",
+        "-Wno-implicit-fallthrough", // in idl_gen_general.cpp and reflection.cpp
     ],
 
     local_include_dirs: [
