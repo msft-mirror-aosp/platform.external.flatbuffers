@@ -94,7 +94,7 @@ std::string MakeCamel(const std::string &in, bool first) {
 void DeserializeDoc( std::vector<std::string> &doc,
                      const Vector<Offset<String>> *documentation) {
   if (documentation == nullptr) return;
-  for (uoffset_t index = 0; index < documentation->Length(); index++)
+  for (uoffset_t index = 0; index < documentation->size(); index++)
     doc.push_back(documentation->Get(index)->str());
 }
 
@@ -411,10 +411,8 @@ CheckedError Parser::Next() {
           }
           cursor_ += 2;
           break;
-        } else {
-          // fall thru
         }
-        FLATBUFFERS_ATTRIBUTE(fallthrough);
+        FLATBUFFERS_FALLTHROUGH(); // else fall thru
       default:
         const auto has_sign = (c == '+') || (c == '-');
         // '-'/'+' and following identifier - can be a predefined constant like:
@@ -430,7 +428,7 @@ CheckedError Parser::Next() {
 
         auto dot_lvl = (c == '.') ? 0 : 1;  // dot_lvl==0 <=> exactly one '.' seen
         if (!dot_lvl && !is_digit(*cursor_)) return NoError(); // enum?
-        // Parser accepts hexadecimal-ﬂoating-literal (see C++ 5.13.4).
+        // Parser accepts hexadecimal-floating-literal (see C++ 5.13.4).
         if (is_digit(c) || has_sign || !dot_lvl) {
           const auto start = cursor_ - 1;
           auto start_digits = !is_digit(c) ? cursor_ : cursor_ - 1;
@@ -769,6 +767,9 @@ CheckedError Parser::ParseField(StructDef &struct_def) {
         return Error("'key' field must be string or scalar type");
     }
   }
+  field->shared = field->attributes.Lookup("shared") != nullptr;
+  if (field->shared && field->value.type.base_type != BASE_TYPE_STRING)
+    return Error("shared can only be defined on strings");
 
   auto field_native_custom_alloc =
       field->attributes.Lookup("native_custom_alloc");
@@ -779,7 +780,7 @@ CheckedError Parser::ParseField(StructDef &struct_def) {
 
   field->native_inline = field->attributes.Lookup("native_inline") != nullptr;
   if (field->native_inline && !IsStruct(field->value.type))
-    return Error("native_inline can only be defined on structs'");
+    return Error("native_inline can only be defined on structs");
 
   auto nested = field->attributes.Lookup("nested_flatbuffer");
   if (nested) {
@@ -1215,8 +1216,15 @@ CheckedError Parser::ParseNestedFlatbuffer(Value &val, FieldDef *field,
     nested_parser.uses_flexbuffers_ = uses_flexbuffers_;
 
     // Parse JSON substring into new flatbuffer builder using nested_parser
-    if (!nested_parser.Parse(substring.c_str(), nullptr, nullptr)) {
-      ECHECK(Error(nested_parser.error_));
+    bool ok = nested_parser.Parse(substring.c_str(), nullptr, nullptr);
+
+    // Clean nested_parser to avoid deleting the elements in
+    // the SymbolTables on destruction
+    nested_parser.enums_.dict.clear();
+    nested_parser.enums_.vec.clear();
+
+    if (!ok) {
+      ECHECK(Error(nested_parser.error_)); 
     }
     // Force alignment for nested flatbuffer
     builder_.ForceVectorAlignment(nested_parser.builder_.GetSize(), sizeof(uint8_t),
@@ -1225,11 +1233,6 @@ CheckedError Parser::ParseNestedFlatbuffer(Value &val, FieldDef *field,
     auto off = builder_.CreateVector(nested_parser.builder_.GetBufferPointer(),
                                      nested_parser.builder_.GetSize());
     val.constant = NumToString(off.o);
-
-    // Clean nested_parser before destruction to avoid deleting the elements in
-    // the SymbolTables
-    nested_parser.enums_.dict.clear();
-    nested_parser.enums_.vec.clear();
   }
   return NoError();
 }
@@ -2755,8 +2758,8 @@ bool StructDef::Deserialize(Parser &parser, const reflection::Object *object) {
   predecl = false;
   sortbysize = attributes.Lookup("original_order") == nullptr && !fixed;
   std::vector<uoffset_t> indexes =
-    std::vector<uoffset_t>(object->fields()->Length());
-  for (uoffset_t i = 0; i < object->fields()->Length(); i++)
+    std::vector<uoffset_t>(object->fields()->size());
+  for (uoffset_t i = 0; i < object->fields()->size(); i++)
     indexes[object->fields()->Get(i)->id()] = i;
   for (size_t i = 0; i < indexes.size(); i++) {
     auto field = object->fields()->Get(indexes[i]);
