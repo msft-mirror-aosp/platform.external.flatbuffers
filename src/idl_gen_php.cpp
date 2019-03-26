@@ -31,7 +31,7 @@ class PhpGenerator : public BaseGenerator {
  public:
   PhpGenerator(const Parser &parser, const std::string &path,
                const std::string &file_name)
-      : BaseGenerator(parser, path, file_name, "\\", "\\"){};
+      : BaseGenerator(parser, path, file_name, "\\", "\\") {}
   bool generate() {
     if (!GenerateEnums()) return false;
     if (!GenerateStructs()) return false;
@@ -828,7 +828,7 @@ class PhpGenerator : public BaseGenerator {
     for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
          ++it) {
       auto &ev = **it;
-      code += Indent + Indent + "\"" + ev.name + "\",\n";
+      code += Indent + Indent + enum_def.name + "::" + ev.name + "=>" + "\"" + ev.name + "\",\n";
     }
 
     code += Indent + ");\n\n";
