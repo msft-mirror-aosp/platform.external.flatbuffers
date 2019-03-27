@@ -130,6 +130,9 @@ template<> inline std::string NumToString<signed char>(signed char t) {
 template<> inline std::string NumToString<unsigned char>(unsigned char t) {
   return NumToString(static_cast<int>(t));
 }
+template<> inline std::string NumToString<char>(char t) {
+  return NumToString(static_cast<int>(t));
+}
 #if defined(FLATBUFFERS_CPP98_STL)
 template<> inline std::string NumToString<long long>(long long t) {
   char buf[21];  // (log((1 << 63) - 1) / log(10)) + 2
@@ -272,7 +275,7 @@ inline void strtoval_impl(float *val, const char *str, char **endptr) {
 //
 // Return value (like strtoull and strtoll, but reject partial result):
 // - If successful, an integer value corresponding to the str is returned.
-// - If full string conversion can't be performed, ​0​ is returned.
+// - If full string conversion can't be performed, 0 is returned.
 // - If the converted value falls out of range of corresponding return type, a
 // range error occurs. In this case value MAX(T)/MIN(T) is returned.
 template<typename T>
@@ -316,7 +319,7 @@ inline bool StringToFloatImpl(T *val, const char *const str) {
 // Convert a string to an instance of T.
 // Return value (matched with StringToInteger64Impl and strtod):
 // - If successful, a numeric value corresponding to the str is returned.
-// - If full string conversion can't be performed, ​0​ is returned.
+// - If full string conversion can't be performed, 0 is returned.
 // - If the converted value falls out of range of corresponding return type, a
 // range error occurs. In this case value MAX(T)/MIN(T) is returned.
 template<typename T> inline bool StringToNumber(const char *s, T *val) {

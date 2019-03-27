@@ -2,9 +2,18 @@
 #define FLATBUFFERS_BASE_H_
 
 // clang-format off
+
+// If activate should be declared and included first.
 #if defined(FLATBUFFERS_MEMORY_LEAK_TRACKING) && \
     defined(_MSC_VER) && defined(_DEBUG)
+  // The _CRTDBG_MAP_ALLOC inside <crtdbg.h> will replace
+  // calloc/free (etc) to its debug version using #define directives.
   #define _CRTDBG_MAP_ALLOC
+  #include <stdlib.h>
+  #include <crtdbg.h>
+  // Replace operator new by trace-enabled version.
+  #define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
+  #define new DEBUG_NEW
 #endif
 
 #if !defined(FLATBUFFERS_ASSERT)
@@ -22,13 +31,6 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-
-#if defined(FLATBUFFERS_MEMORY_LEAK_TRACKING) && \
-    defined(_MSC_VER) && defined(_DEBUG)
-  #include <crtdbg.h>
-  #define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
-  #define new DEBUG_NEW
-#endif
 
 #if defined(ARDUINO) && !defined(ARDUINOSTL_M_H)
   #include <utility.h>
@@ -68,6 +70,18 @@
 // Use the _MSC_VER and _MSVC_LANG definition instead of the __cplusplus  for compatibility.
 // The _MSVC_LANG macro reports the Standard version regardless of the '/Zc:__cplusplus' switch.
 
+#if defined(__GNUC__) && !defined(__clang__)
+  #define FLATBUFFERS_GCC (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#else
+  #define FLATBUFFERS_GCC 0
+#endif
+
+#if defined(__clang__)
+  #define FLATBUFFERS_CLANG (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
+#else
+  #define FLATBUFFERS_CLANG 0
+#endif
+
 /// @cond FLATBUFFERS_INTERNAL
 #if __cplusplus <= 199711L && \
     (!defined(_MSC_VER) || _MSC_VER < 1600) && \
@@ -104,7 +118,8 @@
 #endif // __s390x__
 #if !defined(FLATBUFFERS_LITTLEENDIAN)
   #if defined(__GNUC__) || defined(__clang__)
-    #ifdef __BIG_ENDIAN__
+    #if (defined(__BIG_ENDIAN__) || \
+         (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
       #define FLATBUFFERS_LITTLEENDIAN 0
     #else
       #define FLATBUFFERS_LITTLEENDIAN 1
@@ -233,13 +248,23 @@ template<typename T> FLATBUFFERS_CONSTEXPR inline bool IsConstTrue(T t) {
   return !!t;
 }
 
-// Enable of std:c++17 or higher.
-#if (defined(__cplusplus) &&  (__cplusplus >= 201703L)) || \
-    (defined(_MSVC_LANG) &&  (_MSVC_LANG >= 201703L))
+// Enable C++ attribute [[]] if std:c++17 or higher.
+#if ((__cplusplus >= 201703L) \
+    || (defined(_MSVC_LANG) &&  (_MSVC_LANG >= 201703L)))
   // All attributes unknown to an implementation are ignored without causing an error.
-  #define FLATBUFFERS_ATTRIBUTE(attr) // [[attr]] - will be enabled in a future release
+  #define FLATBUFFERS_ATTRIBUTE(attr) [[attr]]
+
+  #define FLATBUFFERS_FALLTHROUGH() [[fallthrough]]
 #else
   #define FLATBUFFERS_ATTRIBUTE(attr)
+
+  #if FLATBUFFERS_CLANG >= 30800
+    #define FLATBUFFERS_FALLTHROUGH() [[clang::fallthrough]]
+  #elif FLATBUFFERS_GCC >= 70300
+    #define FLATBUFFERS_FALLTHROUGH() [[gnu::fallthrough]]
+  #else
+    #define FLATBUFFERS_FALLTHROUGH()
+  #endif
 #endif
 
 /// @endcond
@@ -336,6 +361,11 @@ template<typename T>
 __supress_ubsan__("alignment")
 void WriteScalar(void *p, T t) {
   *reinterpret_cast<T *>(p) = EndianScalar(t);
+}
+
+template<typename T> struct Offset;
+template<typename T> __supress_ubsan__("alignment") void WriteScalar(void *p, Offset<T> t) {
+  *reinterpret_cast<uoffset_t *>(p) = EndianScalar(t.o);
 }
 
 // Computes how many bytes you'd have to pad to be able to write an
