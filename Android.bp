@@ -62,3 +62,11 @@ cc_binary_host {
         "grpc/src/compiler/java_generator.cc",
     ],
 }
+
+java_library {
+    name: "flatbuffers-java",
+    srcs: ["java/**/*.java"],
+    sdk_version: "current",
+
+    java_version: "1.8",
+}
