@@ -7,7 +7,8 @@ import java.lang.*;
 import java.util.*;
 import com.google.flatbuffers.*;
 
-@SuppressWarnings("unused")public final class Vec3 extends Struct {
+@SuppressWarnings("unused")
+public final class Vec3 extends Struct {
   public void __init(int _i, ByteBuffer _bb) { bb_pos = _i; bb = _bb; }
   public Vec3 __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
@@ -25,7 +26,7 @@ import com.google.flatbuffers.*;
   public Test test3(Test obj) { return obj.__assign(bb_pos + 26, bb); }
 
   public static int createVec3(FlatBufferBuilder builder, float x, float y, float z, double test1, byte test2, short test3_a, byte test3_b) {
-    builder.prep(16, 32);
+    builder.prep(8, 32);
     builder.pad(2);
     builder.prep(2, 4);
     builder.pad(1);

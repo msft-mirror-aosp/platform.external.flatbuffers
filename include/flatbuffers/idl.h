@@ -258,6 +258,7 @@ struct FieldDef : public Definition {
       : deprecated(false),
         required(false),
         key(false),
+        shared(false),
         native_inline(false),
         flexbuffer(false),
         nested_flatbuffer(NULL),
@@ -273,6 +274,8 @@ struct FieldDef : public Definition {
                     // written in new data nor accessed in new code.
   bool required;    // Field must always be present.
   bool key;         // Field functions as a key for creating sorted vectors.
+  bool shared;  // Field will be using string pooling (i.e. CreateSharedString)
+                // as default serialization behavior if field is a string.
   bool native_inline;  // Field will be defined inline (instead of as a pointer)
                        // for native tables if field is a struct.
   bool flexbuffer;     // This field contains FlexBuffer data.
@@ -326,7 +329,7 @@ inline size_t InlineAlignment(const Type &type) {
 
 struct EnumVal {
   EnumVal(const std::string &_name, int64_t _val) : name(_name), value(_val) {}
-  EnumVal() : value(0){};
+  EnumVal() : value(0) {}
 
   Offset<reflection::EnumVal> Serialize(FlatBufferBuilder *builder, const Parser &parser) const;
 
@@ -407,6 +410,7 @@ struct IDLOptions {
   bool gen_compare;
   std::string cpp_object_api_pointer_type;
   std::string cpp_object_api_string_type;
+  bool cpp_object_api_string_flexible_constructor;
   bool gen_nullable;
   bool gen_generated;
   std::string object_prefix;
@@ -422,6 +426,7 @@ struct IDLOptions {
   std::string go_import;
   std::string go_namespace;
   bool reexport_ts_modules;
+  bool js_ts_short_names;
   bool protobuf_ascii_alike;
   bool size_prefixed;
   std::string root_type;
@@ -482,6 +487,7 @@ struct IDLOptions {
         generate_object_based_api(false),
         gen_compare(false),
         cpp_object_api_pointer_type("std::unique_ptr"),
+        cpp_object_api_string_flexible_constructor(false),
         gen_nullable(false),
         gen_generated(false),
         object_suffix("T"),
@@ -493,6 +499,7 @@ struct IDLOptions {
         binary_schema_builtins(false),
         skip_flatbuffers_import(false),
         reexport_ts_modules(true),
+        js_ts_short_names(false),
         protobuf_ascii_alike(false),
         size_prefixed(false),
         force_defaults(false),
@@ -608,6 +615,7 @@ class Parser : public ParserState {
     known_attributes_["deprecated"] = true;
     known_attributes_["required"] = true;
     known_attributes_["key"] = true;
+    known_attributes_["shared"] = true;
     known_attributes_["hash"] = true;
     known_attributes_["id"] = true;
     known_attributes_["force_align"] = true;
@@ -621,6 +629,7 @@ class Parser : public ParserState {
     known_attributes_["cpp_ptr_type"] = true;
     known_attributes_["cpp_ptr_type_get"] = true;
     known_attributes_["cpp_str_type"] = true;
+    known_attributes_["cpp_str_flex_ctor"] = true;
     known_attributes_["native_inline"] = true;
     known_attributes_["native_custom_alloc"] = true;
     known_attributes_["native_type"] = true;
@@ -713,7 +722,9 @@ class Parser : public ParserState {
   FLATBUFFERS_CHECKED_ERROR ParseComma();
   FLATBUFFERS_CHECKED_ERROR ParseAnyValue(Value &val, FieldDef *field,
                                           size_t parent_fieldn,
-                                          const StructDef *parent_struct_def);
+                                          const StructDef *parent_struct_def,
+                                          uoffset_t count,
+                                          bool inside_vector = false);
   template<typename F>
   FLATBUFFERS_CHECKED_ERROR ParseTableDelimiters(size_t &fieldn,
                                                  const StructDef *struct_def,
@@ -722,8 +733,9 @@ class Parser : public ParserState {
                                        std::string *value, uoffset_t *ovalue);
   void SerializeStruct(const StructDef &struct_def, const Value &val);
   template<typename F>
-  FLATBUFFERS_CHECKED_ERROR ParseVectorDelimiters(size_t &count, F body);
-  FLATBUFFERS_CHECKED_ERROR ParseVector(const Type &type, uoffset_t *ovalue);
+  FLATBUFFERS_CHECKED_ERROR ParseVectorDelimiters(uoffset_t &count, F body);
+  FLATBUFFERS_CHECKED_ERROR ParseVector(const Type &type, uoffset_t *ovalue,
+                                        FieldDef *field, size_t fieldn);
   FLATBUFFERS_CHECKED_ERROR ParseNestedFlatbuffer(Value &val, FieldDef *field,
                                                   size_t fieldn,
                                                   const StructDef *parent_struct_def);
@@ -769,7 +781,7 @@ class Parser : public ParserState {
                                        const char *suffix,
                                        BaseType baseType);
 
-  bool SupportsVectorOfUnions() const;
+  bool SupportsAdvancedUnionFeatures() const;
   Namespace *UniqueNamespace(Namespace *ns);
 
   FLATBUFFERS_CHECKED_ERROR RecurseError();

@@ -94,7 +94,7 @@ std::string MakeCamel(const std::string &in, bool first) {
 void DeserializeDoc( std::vector<std::string> &doc,
                      const Vector<Offset<String>> *documentation) {
   if (documentation == nullptr) return;
-  for (uoffset_t index = 0; index < documentation->Length(); index++)
+  for (uoffset_t index = 0; index < documentation->size(); index++)
     doc.push_back(documentation->Get(index)->str());
 }
 
@@ -374,7 +374,7 @@ CheckedError Parser::Next() {
                   "illegal Unicode sequence (unpaired high surrogate)");
             }
             // reset if non-printable
-            attr_is_trivial_ascii_string_ &= check_in_range(*cursor_, ' ', '~');
+            attr_is_trivial_ascii_string_ &= check_ascii_range(*cursor_, ' ', '~');
 
             attribute_ += *cursor_++;
           }
@@ -411,10 +411,8 @@ CheckedError Parser::Next() {
           }
           cursor_ += 2;
           break;
-        } else {
-          // fall thru
         }
-        FLATBUFFERS_ATTRIBUTE(fallthrough);
+        FLATBUFFERS_FALLTHROUGH(); // else fall thru
       default:
         const auto has_sign = (c == '+') || (c == '-');
         // '-'/'+' and following identifier - can be a predefined constant like:
@@ -430,7 +428,7 @@ CheckedError Parser::Next() {
 
         auto dot_lvl = (c == '.') ? 0 : 1;  // dot_lvl==0 <=> exactly one '.' seen
         if (!dot_lvl && !is_digit(*cursor_)) return NoError(); // enum?
-        // Parser accepts hexadecimal-ﬂoating-literal (see C++ 5.13.4).
+        // Parser accepts hexadecimal-floating-literal (see C++ 5.13.4).
         if (is_digit(c) || has_sign || !dot_lvl) {
           const auto start = cursor_ - 1;
           auto start_digits = !is_digit(c) ? cursor_ : cursor_ - 1;
@@ -478,7 +476,7 @@ CheckedError Parser::Next() {
         }
         std::string ch;
         ch = c;
-        if (false == check_in_range(c, ' ', '~')) ch = "code: " + NumToString(c);
+        if (false == check_ascii_range(c, ' ', '~')) ch = "code: " + NumToString(c);
         return Error("illegal character: " + ch);
     }
   }
@@ -652,7 +650,7 @@ CheckedError Parser::ParseField(StructDef &struct_def) {
   } else if (type.base_type == BASE_TYPE_VECTOR &&
              type.element == BASE_TYPE_UNION) {
     // Only cpp, js and ts supports the union vector feature so far.
-    if (!SupportsVectorOfUnions()) {
+    if (!SupportsAdvancedUnionFeatures()) {
       return Error(
           "Vectors of unions are not yet supported in all "
           "the specified programming languages.");
@@ -769,6 +767,9 @@ CheckedError Parser::ParseField(StructDef &struct_def) {
         return Error("'key' field must be string or scalar type");
     }
   }
+  field->shared = field->attributes.Lookup("shared") != nullptr;
+  if (field->shared && field->value.type.base_type != BASE_TYPE_STRING)
+    return Error("shared can only be defined on strings");
 
   auto field_native_custom_alloc =
       field->attributes.Lookup("native_custom_alloc");
@@ -779,7 +780,7 @@ CheckedError Parser::ParseField(StructDef &struct_def) {
 
   field->native_inline = field->attributes.Lookup("native_inline") != nullptr;
   if (field->native_inline && !IsStruct(field->value.type))
-    return Error("native_inline can only be defined on structs'");
+    return Error("native_inline can only be defined on structs");
 
   auto nested = field->attributes.Lookup("nested_flatbuffer");
   if (nested) {
@@ -842,25 +843,45 @@ CheckedError Parser::ParseComma() {
 
 CheckedError Parser::ParseAnyValue(Value &val, FieldDef *field,
                                    size_t parent_fieldn,
-                                   const StructDef *parent_struct_def) {
+                                   const StructDef *parent_struct_def,
+                                   uoffset_t count,
+                                   bool inside_vector) {
   switch (val.type.base_type) {
     case BASE_TYPE_UNION: {
       FLATBUFFERS_ASSERT(field);
       std::string constant;
+      Vector<uint8_t> *vector_of_union_types = nullptr;
       // Find corresponding type field we may have already parsed.
-      for (auto elem = field_stack_.rbegin();
-           elem != field_stack_.rbegin() + parent_fieldn; ++elem) {
+      for (auto elem = field_stack_.rbegin() + count;
+           elem != field_stack_.rbegin() + parent_fieldn + count; ++elem) {
         auto &type = elem->second->value.type;
-        if (type.base_type == BASE_TYPE_UTYPE &&
-            type.enum_def == val.type.enum_def) {
-          constant = elem->first.constant;
-          break;
+        if (type.enum_def == val.type.enum_def) {
+          if (inside_vector) {
+            if (type.base_type == BASE_TYPE_VECTOR &&
+                type.element == BASE_TYPE_UTYPE) {
+              // Vector of union type field.
+              uoffset_t offset;
+              ECHECK(atot(elem->first.constant.c_str(), *this, &offset));
+              vector_of_union_types = reinterpret_cast<Vector<uint8_t> *>(
+                                        builder_.GetCurrentBufferPointer() +
+                                        builder_.GetSize() - offset);
+              break;
+            }
+          } else {
+            if (type.base_type == BASE_TYPE_UTYPE) {
+              // Union type field.
+              constant = elem->first.constant;
+              break;
+            }
+          }
         }
       }
-      if (constant.empty()) {
+      if (constant.empty() && !inside_vector) {
         // We haven't seen the type field yet. Sadly a lot of JSON writers
         // output these in alphabetical order, meaning it comes after this
         // value. So we scan past the value to find it, then come back here.
+        // We currently don't do this for vectors of unions because the
+        // scanning/serialization logic would get very complicated.
         auto type_name = field->name + UnionTypeFieldSuffix();
         FLATBUFFERS_ASSERT(parent_struct_def);
         auto type_field = parent_struct_def->fields.Lookup(type_name);
@@ -875,18 +896,25 @@ CheckedError Parser::ParseAnyValue(Value &val, FieldDef *field,
         } else {
           EXPECT(kTokenIdentifier);
         }
-        if (next_name != type_name)
-          return Error("missing type field after this union value: " +
-                       type_name);
-        EXPECT(':');
-        Value type_val = type_field->value;
-        ECHECK(ParseAnyValue(type_val, type_field, 0, nullptr));
-        constant = type_val.constant;
-        // Got the information we needed, now rewind:
-        *static_cast<ParserState *>(this) = backup;
+        if (next_name == type_name) {
+          EXPECT(':');
+          Value type_val = type_field->value;
+          ECHECK(ParseAnyValue(type_val, type_field, 0, nullptr, 0));
+          constant = type_val.constant;
+          // Got the information we needed, now rewind:
+          *static_cast<ParserState *>(this) = backup;
+        }
+      }
+      if (constant.empty() && !vector_of_union_types) {
+        return Error("missing type field for this union value: " +
+                     field->name);
       }
       uint8_t enum_idx;
-      ECHECK(atot(constant.c_str(), *this, &enum_idx));
+      if (vector_of_union_types) {
+        enum_idx = vector_of_union_types->Get(count);
+      } else {
+        ECHECK(atot(constant.c_str(), *this, &enum_idx));
+      }
       auto enum_val = val.type.enum_def->ReverseLookup(enum_idx);
       if (!enum_val) return Error("illegal type id for: " + field->name);
       if (enum_val->union_type.base_type == BASE_TYPE_STRUCT) {
@@ -914,7 +942,7 @@ CheckedError Parser::ParseAnyValue(Value &val, FieldDef *field,
     }
     case BASE_TYPE_VECTOR: {
       uoffset_t off;
-      ECHECK(ParseVector(val.type.VectorType(), &off));
+      ECHECK(ParseVector(val.type.VectorType(), &off, field, parent_fieldn));
       val.constant = NumToString(off);
       break;
     }
@@ -1025,7 +1053,7 @@ CheckedError Parser::ParseTable(const StructDef &struct_def, std::string *value,
                   ParseNestedFlatbuffer(val, field, fieldn, struct_def_inner));
             } else {
               ECHECK(Recurse([&]() {
-                return ParseAnyValue(val, field, fieldn, struct_def_inner);
+                return ParseAnyValue(val, field, fieldn, struct_def_inner, 0);
               }));
             }
             // Hardcoded insertion-sort with error-check.
@@ -1143,7 +1171,7 @@ CheckedError Parser::ParseTable(const StructDef &struct_def, std::string *value,
 }
 
 template <typename F>
-CheckedError Parser::ParseVectorDelimiters(size_t &count, F body) {
+CheckedError Parser::ParseVectorDelimiters(uoffset_t &count, F body) {
   EXPECT('[');
   for (;;) {
     if ((!opts.strict_json || !count) && Is(']')) break;
@@ -1156,12 +1184,15 @@ CheckedError Parser::ParseVectorDelimiters(size_t &count, F body) {
   return NoError();
 }
 
-CheckedError Parser::ParseVector(const Type &type, uoffset_t *ovalue) {
-  size_t count = 0;
-  auto err = ParseVectorDelimiters(count, [&](size_t &) -> CheckedError {
+CheckedError Parser::ParseVector(const Type &type, uoffset_t *ovalue,
+                                 FieldDef *field, size_t fieldn) {
+  uoffset_t count = 0;
+  auto err = ParseVectorDelimiters(count, [&](uoffset_t &) -> CheckedError {
     Value val;
     val.type = type;
-    ECHECK(Recurse([&]() { return ParseAnyValue(val, nullptr, 0, nullptr); }));
+    ECHECK(Recurse([&]() {
+      return ParseAnyValue(val, field, fieldn, nullptr, count, true);
+    }));
     field_stack_.push_back(std::make_pair(val, nullptr));
     return NoError();
   });
@@ -1169,7 +1200,7 @@ CheckedError Parser::ParseVector(const Type &type, uoffset_t *ovalue) {
 
   builder_.StartVector(count * InlineSize(type) / InlineAlignment(type),
                        InlineAlignment(type));
-  for (size_t i = 0; i < count; i++) {
+  for (uoffset_t i = 0; i < count; i++) {
     // start at the back, since we're building the data backwards.
     auto &val = field_stack_.back().first;
     switch (val.type.base_type) {
@@ -1200,7 +1231,7 @@ CheckedError Parser::ParseNestedFlatbuffer(Value &val, FieldDef *field,
                                            size_t fieldn,
                                            const StructDef *parent_struct_def) {
   if (token_ == '[') {  // backwards compat for 'legacy' ubyte buffers
-    ECHECK(ParseAnyValue(val, field, fieldn, parent_struct_def));
+    ECHECK(ParseAnyValue(val, field, fieldn, parent_struct_def, 0));
   } else {
     auto cursor_at_value_begin = cursor_;
     ECHECK(SkipAnyJsonValue());
@@ -1215,8 +1246,15 @@ CheckedError Parser::ParseNestedFlatbuffer(Value &val, FieldDef *field,
     nested_parser.uses_flexbuffers_ = uses_flexbuffers_;
 
     // Parse JSON substring into new flatbuffer builder using nested_parser
-    if (!nested_parser.Parse(substring.c_str(), nullptr, nullptr)) {
-      ECHECK(Error(nested_parser.error_));
+    bool ok = nested_parser.Parse(substring.c_str(), nullptr, nullptr);
+
+    // Clean nested_parser to avoid deleting the elements in
+    // the SymbolTables on destruction
+    nested_parser.enums_.dict.clear();
+    nested_parser.enums_.vec.clear();
+
+    if (!ok) {
+      ECHECK(Error(nested_parser.error_)); 
     }
     // Force alignment for nested flatbuffer
     builder_.ForceVectorAlignment(nested_parser.builder_.GetSize(), sizeof(uint8_t),
@@ -1225,11 +1263,6 @@ CheckedError Parser::ParseNestedFlatbuffer(Value &val, FieldDef *field,
     auto off = builder_.CreateVector(nested_parser.builder_.GetBufferPointer(),
                                      nested_parser.builder_.GetSize());
     val.constant = NumToString(off.o);
-
-    // Clean nested_parser before destruction to avoid deleting the elements in
-    // the SymbolTables
-    nested_parser.enums_.dict.clear();
-    nested_parser.enums_.vec.clear();
   }
   return NoError();
 }
@@ -1754,11 +1787,12 @@ CheckedError Parser::CheckClash(std::vector<FieldDef *> &fields,
   return NoError();
 }
 
-bool Parser::SupportsVectorOfUnions() const {
+bool Parser::SupportsAdvancedUnionFeatures() const {
   return opts.lang_to_generate != 0 &&
          (opts.lang_to_generate & ~(IDLOptions::kCpp | IDLOptions::kJs |
                                     IDLOptions::kTs | IDLOptions::kPhp |
-                                    IDLOptions::kJava | IDLOptions::kCSharp)) == 0;
+                                    IDLOptions::kJava | IDLOptions::kCSharp |
+                                    IDLOptions::kBinary)) == 0;
 }
 
 Namespace *Parser::UniqueNamespace(Namespace *ns) {
@@ -2281,8 +2315,8 @@ CheckedError Parser::SkipAnyJsonValue() {
           });
     }
     case '[': {
-      size_t count = 0;
-      return ParseVectorDelimiters(count, [&](size_t &) -> CheckedError {
+      uoffset_t count = 0;
+      return ParseVectorDelimiters(count, [&](uoffset_t &) -> CheckedError {
         return Recurse([&]() { return SkipAnyJsonValue(); });
       });
     }
@@ -2318,8 +2352,8 @@ CheckedError Parser::ParseFlexBufferValue(flexbuffers::Builder *builder) {
     }
     case '[': {
       auto start = builder->StartVector();
-      size_t count = 0;
-      ECHECK(ParseVectorDelimiters(count, [&](size_t &) -> CheckedError {
+      uoffset_t count = 0;
+      ECHECK(ParseVectorDelimiters(count, [&](uoffset_t &) -> CheckedError {
         return ParseFlexBufferValue(builder);
       }));
       builder->EndVector(start, false, false);
@@ -2451,7 +2485,7 @@ CheckedError Parser::ParseRoot(const char *source, const char **include_paths,
       for (auto val_it = enum_def.vals.vec.begin();
            val_it != enum_def.vals.vec.end(); ++val_it) {
         auto &val = **val_it;
-        if (!SupportsVectorOfUnions() && val.union_type.struct_def &&
+        if (!SupportsAdvancedUnionFeatures() && val.union_type.struct_def &&
             val.union_type.struct_def->fixed)
           return Error(
               "only tables can be union elements in the generated language: " +
@@ -2755,8 +2789,8 @@ bool StructDef::Deserialize(Parser &parser, const reflection::Object *object) {
   predecl = false;
   sortbysize = attributes.Lookup("original_order") == nullptr && !fixed;
   std::vector<uoffset_t> indexes =
-    std::vector<uoffset_t>(object->fields()->Length());
-  for (uoffset_t i = 0; i < object->fields()->Length(); i++)
+    std::vector<uoffset_t>(object->fields()->size());
+  for (uoffset_t i = 0; i < object->fields()->size(); i++)
     indexes[object->fields()->Get(i)->id()] = i;
   for (size_t i = 0; i < indexes.size(); i++) {
     auto field = object->fields()->Get(indexes[i]);

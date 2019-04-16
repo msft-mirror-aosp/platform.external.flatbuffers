@@ -130,6 +130,7 @@ FullType GetFullType(const Type &type) {
       case ftUnionKey:
       case ftUnionValue: {
         FLATBUFFERS_ASSERT(false && "vectors of unions are unsupported");
+        break;
       }
       default: {
         FLATBUFFERS_ASSERT(false && "vector of vectors are unsupported");
@@ -297,6 +298,11 @@ class RustGenerator : public BaseGenerator {
     code_ += "// " + std::string(FlatBuffersGeneratedWarning()) + "\n\n"; 
 
     assert(!cur_name_space_);
+
+    // Generate imports for the global scope in case no namespace is used
+    // in the schema file.
+    GenNamespaceImports(0);
+    code_ += "";
 
     // Generate all code in their namespaces, once, because Rust does not
     // permit re-opening modules.
@@ -580,7 +586,7 @@ class RustGenerator : public BaseGenerator {
     GenComment(enum_def.doc_comment);
     code_ += "#[allow(non_camel_case_types)]";
     code_ += "#[repr({{BASE_TYPE}})]";
-    code_ += "#[derive(Clone, Copy, PartialEq, Debug)]";
+    code_ += "#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]";
     code_ += "pub enum " + Name(enum_def) + " {";
 
     int64_t anyv = 0;
@@ -1021,11 +1027,11 @@ class RustGenerator : public BaseGenerator {
       }
       case ftVectorOfTable: {
         const auto typname = WrapInNameSpace(*type.struct_def);
-        return WrapInOptionIfNotRequired("flatbuffers::Vector<flatbuffers::ForwardsUOffset<" + \
+        return WrapInOptionIfNotRequired("flatbuffers::Vector<" + lifetime + ", flatbuffers::ForwardsUOffset<" + \
                typname + "<" + lifetime + ">>>", field.required);
       }
       case ftVectorOfString: {
-        return WrapInOptionIfNotRequired("flatbuffers::Vector<flatbuffers::ForwardsUOffset<&" + \
+        return WrapInOptionIfNotRequired("flatbuffers::Vector<" + lifetime + ", flatbuffers::ForwardsUOffset<&" + \
                lifetime + " str>>", field.required);
       }
       case ftVectorOfUnionValue: {
@@ -1144,8 +1150,6 @@ class RustGenerator : public BaseGenerator {
   // Generate an accessor struct, builder struct, and create function for a
   // table.
   void GenTable(const StructDef &struct_def) {
-    GenComment(struct_def.doc_comment);
-
     code_.SetValue("STRUCT_NAME", Name(struct_def));
     code_.SetValue("OFFSET_TYPELABEL", Name(struct_def) + "Offset");
     code_.SetValue("STRUCT_NAME_SNAKECASE", MakeSnakeCase(Name(struct_def)));
@@ -1155,6 +1159,9 @@ class RustGenerator : public BaseGenerator {
     code_ += "pub enum {{OFFSET_TYPELABEL}} {}";
     code_ += "#[derive(Copy, Clone, Debug, PartialEq)]";
     code_ += "";
+
+    GenComment(struct_def.doc_comment);
+
     code_ += "pub struct {{STRUCT_NAME}}<'a> {";
     code_ += "  pub _tab: flatbuffers::Table<'a>,";
     code_ += "}";
@@ -1325,8 +1332,8 @@ class RustGenerator : public BaseGenerator {
 
         code_ += "  #[inline]";
         code_ += "  #[allow(non_snake_case)]";
-        code_ += "  pub fn {{FIELD_NAME}}_as_{{U_ELEMENT_NAME}}(&'a self) -> "
-                 "Option<{{U_ELEMENT_TABLE_TYPE}}> {";
+        code_ += "  pub fn {{FIELD_NAME}}_as_{{U_ELEMENT_NAME}}(&self) -> "
+                 "Option<{{U_ELEMENT_TABLE_TYPE}}<'a>> {";
         code_ += "    if self.{{FIELD_NAME}}_type() == {{U_ELEMENT_ENUM_TYPE}} {";
         code_ += "      self.{{FIELD_NAME}}().map(|u| "
                  "{{U_ELEMENT_TABLE_TYPE}}::init_from_table(u))";
@@ -1740,6 +1747,16 @@ class RustGenerator : public BaseGenerator {
     code_ += "";
   }
 
+  void GenNamespaceImports(const int white_spaces) {
+      std::string indent = std::string(white_spaces, ' ');
+      code_ += "";
+      code_ += indent + "use std::mem;";
+      code_ += indent + "use std::cmp::Ordering;";
+      code_ += "";
+      code_ += indent + "extern crate flatbuffers;";
+      code_ += indent + "use self::flatbuffers::EndianScalar;";
+  }
+
   // Set up the correct namespace. This opens a namespace if the current
   // namespace is different from the target namespace. This function
   // closes and opens the namespaces only as necessary.
@@ -1773,15 +1790,10 @@ class RustGenerator : public BaseGenerator {
     // open namespace parts to reach the ns namespace
     // in the previous example, E, then F, then G are opened
     for (auto j = common_prefix_size; j != new_size; ++j) {
+      code_ += "#[allow(unused_imports, dead_code)]";
       code_ += "pub mod " + MakeSnakeCase(ns->components[j]) + " {";
-      code_ += "  #![allow(dead_code)]";
-      code_ += "  #![allow(unused_imports)]";
-      code_ += "";
-      code_ += "  use std::mem;";
-      code_ += "  use std::cmp::Ordering;";
-      code_ += "";
-      code_ += "  extern crate flatbuffers;";
-      code_ += "  use self::flatbuffers::EndianScalar;";
+      // Generate local namespace imports.
+      GenNamespaceImports(2);
     }
     if (new_size != common_prefix_size) { code_ += ""; }
 
