@@ -894,6 +894,17 @@ void MiniReflectFlatBuffersTest(uint8_t *flatbuf) {
       "test5: [ { a: 10, b: 20 }, { a: 30, b: 40 } ], "
       "vector_of_enums: [ Blue, Green ] "
       "}");
+
+  Test test(16, 32);
+  Vec3 vec(1,2,3, 1.5, Color_Red, test);
+  flatbuffers::FlatBufferBuilder vec_builder;
+  vec_builder.Finish(vec_builder.CreateStruct(vec));
+  auto vec_buffer = vec_builder.Release();
+  auto vec_str = flatbuffers::FlatBufferToString(vec_buffer.data(),
+                                                 Vec3::MiniReflectTypeTable());
+  TEST_EQ_STR(
+      vec_str.c_str(),
+      "{ x: 1.0, y: 2.0, z: 3.0, test1: 1.5, test2: Red, test3: { a: 16, b: 32 } }");
 }
 
 // Parse a .proto schema, output as .fbs
@@ -1264,6 +1275,7 @@ void ErrorTest() {
   TestError("table Y {} table X { Y:int; }", "same as table");
   TestError("struct X { Y:string; }", "only scalar");
   TestError("table X { Y:string = \"\"; }", "default values");
+  TestError("struct X { a:uint = 42; }", "default values");
   TestError("enum Y:byte { Z = 1 } table X { y:Y; }", "not part of enum");
   TestError("struct X { Y:int (deprecated); }", "deprecate");
   TestError("union Z { X } table X { Y:Z; } root_type X; { Y: {}, A:1 }",
@@ -1305,15 +1317,20 @@ void ErrorTest() {
   TestError("enum X:bool { Y = true }", "must be integral");
 }
 
-template<typename T> T TestValue(const char *json, const char *type_name) {
+template<typename T>
+T TestValue(const char *json, const char *type_name,
+            const char *decls = nullptr) {
   flatbuffers::Parser parser;
   parser.builder_.ForceDefaults(true);  // return defaults
   auto check_default = json ? false : true;
   if (check_default) { parser.opts.output_default_scalars_in_json = true; }
   // Simple schema.
-  std::string schema =
-      "table X { Y:" + std::string(type_name) + "; } root_type X;";
-  TEST_EQ(parser.Parse(schema.c_str()), true);
+  std::string schema = std::string(decls ? decls : "") + "\n" +
+                       "table X { Y:" + std::string(type_name) +
+                       "; } root_type X;";
+  auto schema_done = parser.Parse(schema.c_str());
+  TEST_EQ_STR(parser.error_.c_str(), "");
+  TEST_EQ(schema_done, true);
 
   auto done = parser.Parse(check_default ? "{}" : json);
   TEST_EQ_STR(parser.error_.c_str(), "");
@@ -1437,6 +1454,24 @@ void EnumOutOfRangeTest() {
   // TODO: these are perfectly valid constants that shouldn't fail
   TestError("enum X:ulong { Y = 13835058055282163712 }", "constant does not fit");
   TestError("enum X:ulong { Y = 18446744073709551615 }", "constant does not fit");
+}
+
+void EnumValueTest() {
+  // json: "{ Y:0 }", schema: table X { Y : "E"}
+  // 0 in enum (V=0) E then Y=0 is valid.
+  TEST_EQ(TestValue<int>("{ Y:0 }", "E", "enum E:int { V }"), 0);
+  TEST_EQ(TestValue<int>("{ Y:V }", "E", "enum E:int { V }"), 0);
+  // A default value of Y is 0.
+  TEST_EQ(TestValue<int>("{ }", "E", "enum E:int { V }"), 0);
+  TEST_EQ(TestValue<int>("{ Y:5 }", "E=V", "enum E:int { V=5 }"), 5);
+  // Generate json with defaults and check.
+  TEST_EQ(TestValue<int>(nullptr, "E=V", "enum E:int { V=5 }"), 5);
+  // 5 in enum
+  TEST_EQ(TestValue<int>("{ Y:5 }", "E", "enum E:int { Z, V=5 }"), 5);
+  TEST_EQ(TestValue<int>("{ Y:5 }", "E=V", "enum E:int { Z, V=5 }"), 5);
+  // Generate json with defaults and check.
+  TEST_EQ(TestValue<int>(nullptr, "E", "enum E:int { Z, V=5 }"), 0);
+  TEST_EQ(TestValue<int>(nullptr, "E=V", "enum E:int { Z, V=5 }"), 5);
 }
 
 void IntegerOutOfRangeTest() {
@@ -1700,6 +1735,53 @@ void InvalidFloatTest() {
   // null is not a number constant!
   TestError("table T { F:float; } root_type T; { F:\"null\" }", invalid_msg);
   TestError("table T { F:float; } root_type T; { F:null }", invalid_msg);
+}
+
+void GenerateTableTextTest() {
+  std::string schemafile;
+  std::string jsonfile;
+  bool ok =
+      flatbuffers::LoadFile((test_data_path + "monster_test.fbs").c_str(),
+                            false, &schemafile) &&
+      flatbuffers::LoadFile((test_data_path + "monsterdata_test.json").c_str(),
+                            false, &jsonfile);
+  TEST_EQ(ok, true);
+  auto include_test_path =
+      flatbuffers::ConCatPathFileName(test_data_path, "include_test");
+  const char *include_directories[] = {test_data_path.c_str(),
+                                       include_test_path.c_str(), nullptr};
+  flatbuffers::IDLOptions opt;
+  opt.indent_step = -1;
+  flatbuffers::Parser parser(opt);
+  ok = parser.Parse(schemafile.c_str(), include_directories) &&
+       parser.Parse(jsonfile.c_str(), include_directories);
+  TEST_EQ(ok, true);
+  // Test root table
+  const Monster *monster = GetMonster(parser.builder_.GetBufferPointer());
+  std::string jsongen;
+  auto result = GenerateTextFromTable(parser, monster, "MyGame.Example.Monster",
+                                      &jsongen);
+  TEST_EQ(result, true);
+  // Test sub table
+  const Vec3 *pos = monster->pos();
+  jsongen.clear();
+  result = GenerateTextFromTable(parser, pos, "MyGame.Example.Vec3", &jsongen);
+  TEST_EQ(result, true);
+  TEST_EQ_STR(
+      jsongen.c_str(),
+      "{x: 1.0,y: 2.0,z: 3.0,test1: 3.0,test2: \"Green\",test3: {a: 5,b: 6}}");
+  const Test &test3 = pos->test3();
+  jsongen.clear();
+  result =
+      GenerateTextFromTable(parser, &test3, "MyGame.Example.Test", &jsongen);
+  TEST_EQ(result, true);
+  TEST_EQ_STR(jsongen.c_str(), "{a: 5,b: 6}");
+  const Test *test4 = monster->test4()->Get(0);
+  jsongen.clear();
+  result =
+      GenerateTextFromTable(parser, test4, "MyGame.Example.Test", &jsongen);
+  TEST_EQ(result, true);
+  TEST_EQ_STR(jsongen.c_str(), "{a: 10,b: 20}");
 }
 
 template<typename T>
@@ -2567,6 +2649,7 @@ int FlatBufferTests() {
     ParseProtoTest();
     UnionVectorTest();
     LoadVerifyBinaryTest();
+    GenerateTableTextTest();
   #endif
   // clang-format on
 
@@ -2575,6 +2658,7 @@ int FlatBufferTests() {
 
   ErrorTest();
   ValueTest();
+  EnumValueTest();
   EnumStringsTest();
   EnumNamesTest();
   EnumOutOfRangeTest();
