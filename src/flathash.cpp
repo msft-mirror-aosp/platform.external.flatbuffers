@@ -15,11 +15,9 @@
  */
 
 #include <stdio.h>
-
 #include <iostream>
 #include <sstream>
 #include <string>
-
 #include "flatbuffers/hash.h"
 
 enum OutputFormat { kDecimal, kHexadecimal, kHexadecimal0x };
@@ -37,7 +35,7 @@ int main(int argc, char *argv[]) {
     }
     printf("  32 bit:\n");
     size = sizeof(flatbuffers::kHashFunctions32) /
-           sizeof(flatbuffers::kHashFunctions32[0]);
+                  sizeof(flatbuffers::kHashFunctions32[0]);
     for (size_t i = 0; i < size; ++i) {
       printf("    * %s\n", flatbuffers::kHashFunctions32[i].name);
     }

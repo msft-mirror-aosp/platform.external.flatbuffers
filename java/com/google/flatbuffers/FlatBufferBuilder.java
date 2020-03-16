@@ -72,6 +72,7 @@ public class FlatBufferBuilder {
         if (initial_size <= 0) {
           initial_size = 1;
         }
+        space = initial_size;
         this.bb_factory = bb_factory;
         if (existing_bb != null) {
           bb = existing_bb;
@@ -81,7 +82,6 @@ public class FlatBufferBuilder {
           bb = bb_factory.newByteBuffer(initial_size);
         }
         this.utf8 = utf8;
-        space = bb.capacity();
     }
 
    /**
@@ -199,17 +199,6 @@ public class FlatBufferBuilder {
         }
     }
 
-   /**
-   * Helper function to test if a field is present in the table
-   *
-   * @param table Flatbuffer table
-   * @param offset virtual table offset
-   * @return true if the filed is present
-   */
-   public static boolean isFieldPresent(Table table, int offset) {
-     return table.__offset(offset) != 0;
-   }
-
     /**
      * Reset the FlatBufferBuilder by purging all data that it holds.
      */
@@ -242,7 +231,6 @@ public class FlatBufferBuilder {
         int new_buf_size = old_buf_size == 0 ? 1 : old_buf_size << 1;
         bb.position(0);
         ByteBuffer nbb = bb_factory.newByteBuffer(new_buf_size);
-        new_buf_size = nbb.clear().capacity(); // Ensure the returned buffer is treated as empty
         nbb.position(new_buf_size - old_buf_size);
         nbb.put(bb);
         return nbb;
@@ -572,38 +560,6 @@ public class FlatBufferBuilder {
         return endVector();
     }
 
-    /**
-     * Create a byte array in the buffer.
-     *
-     * @param arr a source array with data.
-     * @param offset the offset in the source array to start copying from.
-     * @param length the number of bytes to copy from the source array.
-     * @return The offset in the buffer where the encoded array starts.
-     */
-    public int createByteVector(byte[] arr, int offset, int length) {
-        startVector(1, length, 1);
-        bb.position(space -= length);
-        bb.put(arr, offset, length);
-        return endVector();
-    }
-
-    /**
-     * Create a byte array in the buffer.
-     *
-     * The source {@link ByteBuffer} position is advanced by {@link ByteBuffer#remaining()} places
-     * after this call.
-     *
-     * @param byteBuffer A source {@link ByteBuffer} with data.
-     * @return The offset in the buffer where the encoded array starts.
-     */
-    public int createByteVector(ByteBuffer byteBuffer) {
-        int length = byteBuffer.remaining();
-        startVector(1, length, 1);
-        bb.position(space -= length);
-        bb.put(byteBuffer);
-        return endVector();
-    }
-
    /// @cond FLATBUFFERS_INTERNAL
    /**
     * Should not be accessing the final buffer before it is finished.
@@ -676,7 +632,7 @@ public class FlatBufferBuilder {
     *
     * @param numfields The number of fields found in this object.
     */
-    public void startTable(int numfields) {
+    public void startObject(int numfields) {
         notNested();
         if (vtable == null || vtable.length < numfields) vtable = new int[numfields];
         vtable_in_use = numfields;
@@ -801,11 +757,11 @@ public class FlatBufferBuilder {
     * Finish off writing the object that is under construction.
     *
     * @return The offset to the object inside {@link #dataBuffer()}.
-    * @see #startTable(int)
+    * @see #startObject(int)
     */
-    public int endTable() {
+    public int endObject() {
         if (vtable == null || !nested)
-            throw new AssertionError("FlatBuffers: endTable called without startTable");
+            throw new AssertionError("FlatBuffers: endObject called without startObject");
         addInt(0);
         int vtableloc = offset();
         // Write out the current vtable.
