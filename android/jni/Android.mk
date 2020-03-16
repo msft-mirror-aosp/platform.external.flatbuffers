@@ -36,7 +36,8 @@ LOCAL_MODULE := flatbuffers_extra
 LOCAL_SRC_FILES := src/idl_parser.cpp \
                    src/idl_gen_text.cpp \
                    src/reflection.cpp \
-                   src/util.cpp
+                   src/util.cpp \
+                   src/code_generators.cpp
 LOCAL_STATIC_LIBRARIES := flatbuffers
 LOCAL_ARM_MODE := arm
 include $(BUILD_STATIC_LIBRARY)
@@ -50,10 +51,8 @@ LOCAL_SRC_FILES := android/jni/main.cpp \
                    tests/test_builder.h \
                    tests/test_assert.cpp \
                    tests/test_builder.cpp \
-                   tests/native_type_test_impl.h \
-                   tests/native_type_test_impl.cpp \
                    src/idl_gen_fbs.cpp \
-                   src/code_generators.cpp
+                   src/idl_gen_general.cpp
 LOCAL_LDLIBS := -llog -landroid -latomic
 LOCAL_STATIC_LIBRARIES := android_native_app_glue flatbuffers_extra
 LOCAL_ARM_MODE := arm
