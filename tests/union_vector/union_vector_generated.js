@@ -17,13 +17,13 @@ var Character = {
  * @enum {string}
  */
 var CharacterName = {
-  '0': 'NONE',
-  '1': 'MuLan',
-  '2': 'Rapunzel',
-  '3': 'Belle',
-  '4': 'BookFan',
-  '5': 'Other',
-  '6': 'Unused'
+  0: 'NONE',
+  1: 'MuLan',
+  2: 'Rapunzel',
+  3: 'Belle',
+  4: 'BookFan',
+  5: 'Other',
+  6: 'Unused'
 };
 
 /**
@@ -58,16 +58,6 @@ Attacker.prototype.__init = function(i, bb) {
  * @returns {Attacker}
  */
 Attacker.getRootAsAttacker = function(bb, obj) {
-  return (obj || new Attacker).__init(bb.readInt32(bb.position()) + bb.position(), bb);
-};
-
-/**
- * @param {flatbuffers.ByteBuffer} bb
- * @param {Attacker=} obj
- * @returns {Attacker}
- */
-Attacker.getSizePrefixedRootAsAttacker = function(bb, obj) {
-  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
   return (obj || new Attacker).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 };
 
@@ -284,16 +274,6 @@ Movie.getRootAsMovie = function(bb, obj) {
 
 /**
  * @param {flatbuffers.ByteBuffer} bb
- * @param {Movie=} obj
- * @returns {Movie}
- */
-Movie.getSizePrefixedRootAsMovie = function(bb, obj) {
-  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new Movie).__init(bb.readInt32(bb.position()) + bb.position(), bb);
-};
-
-/**
- * @param {flatbuffers.ByteBuffer} bb
  * @returns {boolean}
  */
 Movie.bufferHasIdentifier = function(bb) {
@@ -306,6 +286,21 @@ Movie.bufferHasIdentifier = function(bb) {
 Movie.prototype.mainCharacterType = function() {
   var offset = this.bb.__offset(this.bb_pos, 4);
   return offset ? /** @type {Character} */ (this.bb.readUint8(this.bb_pos + offset)) : Character.NONE;
+};
+
+/**
+ * @param {Character} value
+ * @returns {boolean}
+ */
+Movie.prototype.mutate_main_character_type = function(value) {
+  var offset = this.bb.__offset(this.bb_pos, 4);
+
+  if (offset === 0) {
+    return false;
+  }
+
+  this.bb.writeUint8(this.bb_pos + offset, value);
+  return true;
 };
 
 /**
@@ -456,14 +451,6 @@ Movie.endMovie = function(builder) {
  */
 Movie.finishMovieBuffer = function(builder, offset) {
   builder.finish(offset, 'MOVI');
-};
-
-/**
- * @param {flatbuffers.Builder} builder
- * @param {flatbuffers.Offset} offset
- */
-Movie.finishSizePrefixedMovieBuffer = function(builder, offset) {
-  builder.finish(offset, 'MOVI', true);
 };
 
 /**
