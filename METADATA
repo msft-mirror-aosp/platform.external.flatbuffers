@@ -10,6 +10,7 @@ third_party {
     value: "https://github.com/google/flatbuffers.git"
   }
   version: "v1.12.0"
+  license_type: NOTICE
   last_upgrade_date {
     year: 2020
     month: 3
