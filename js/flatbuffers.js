@@ -829,6 +829,7 @@ flatbuffers.ByteBuffer = function(bytes) {
    * @private
    */
   this.position_ = 0;
+
 };
 
 /**
@@ -841,7 +842,7 @@ flatbuffers.ByteBuffer.allocate = function(byte_size) {
   return new flatbuffers.ByteBuffer(new Uint8Array(byte_size));
 };
 
-flatbuffers.ByteBuffer.prototype.clear = function() {
+flatbuffers.ByteBuffer.prototype.clear = function() {  
   this.position_ = 0;
 };
 

@@ -1,10 +1,6 @@
 # Description:
 #   BUILD rules for generating flatbuffer files in various languages.
 
-"""
-Rules for building C++ flatbuffers with Bazel.
-"""
-
 flatc_path = "@com_github_google_flatbuffers//:flatc"
 
 DEFAULT_INCLUDE_PATHS = [
@@ -50,11 +46,9 @@ def flatbuffer_library_public(
         reflection binaries for the schemas.
       reflection_visiblity: The visibility of the generated reflection Fileset.
       output_to_bindir: Passed to genrule for output to bin directory.
-
-
-    This rule creates a filegroup(name) with all generated source files, and
-    optionally a Fileset([reflection_name]) with all generated reflection
-    binaries.
+    Outs:
+      filegroup(name): all generated source files.
+      Fileset([reflection_name]): (Optional) all generated reflection binaries.
     """
     include_paths_cmd = ["-I %s" % (s) for s in include_paths]
 
@@ -151,8 +145,7 @@ def flatbuffer_cc_library(
           By default, use the value of the visibility parameter above.
       gen_reflections: Optional, if true this will generate the flatbuffer
         reflection binaries for the schemas.
-
-    This produces:
+    Outs:
       filegroup([name]_srcs): all generated .h files.
       filegroup(srcs_filegroup_name if specified, or [name]_includes if not):
           Other flatbuffer_cc_library's can pass this in for their `includes`

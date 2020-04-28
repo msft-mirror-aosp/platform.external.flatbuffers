@@ -13,21 +13,12 @@ var NamespaceA = NamespaceA || {};
 NamespaceA.NamespaceB = NamespaceA.NamespaceB || {};
 
 /**
- * @enum {number}
+ * @enum
  */
 NamespaceA.NamespaceB.EnumInNestedNS = {
-  A: 0,
-  B: 1,
-  C: 2
-};
-
-/**
- * @enum {string}
- */
-NamespaceA.NamespaceB.EnumInNestedNSName = {
-  0: 'A',
-  1: 'B',
-  2: 'C'
+  A: 0, 0: 'A',
+  B: 1, 1: 'B',
+  C: 2, 2: 'C'
 };
 
 /**
