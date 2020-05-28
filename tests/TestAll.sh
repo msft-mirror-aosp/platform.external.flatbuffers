@@ -2,10 +2,6 @@ echo "************************ Java:"
 
 sh JavaTest.sh
 
-echo "************************ Kotlin:"
-
-sh KotlinTest.sh
-
 echo "************************ Go:"
 
 sh GoTest.sh
@@ -60,6 +56,4 @@ echo "(in a different repo)"
 
 echo "************************ Swift:"
 
-cd FlatBuffers.Test.Swift
-sh SwiftTest.sh
-cd ..
+echo "(in a different repo)"

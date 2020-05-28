@@ -17,7 +17,9 @@
 #include "android_native_app_glue.h"
 #include "animal_generated.h" // Includes "flatbuffers/flatbuffers.h".
 
-void android_main(android_app *) {
+void android_main(android_app *app) {
+  app_dummy();
+
   flatbuffers::FlatBufferBuilder builder;
   auto name = builder.CreateString("Dog");
   auto sound = builder.CreateString("Bark");
