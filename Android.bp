@@ -59,3 +59,24 @@ java_library {
 
     java_version: "1.8",
 }
+
+cc_library {
+    name: "libflatbuffers-cpp",
+    export_include_dirs: ["include"],
+    host_supported: true,
+    local_include_dirs: [
+        "grpc",
+        "include",
+    ],
+    srcs: [
+        "src/*.cpp",
+        "grpc/src/compiler/*.cc",
+    ],
+    exclude_srcs: [
+        "src/flathash.cpp",
+    ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.bluetooth.updatable",
+    ],
+}
