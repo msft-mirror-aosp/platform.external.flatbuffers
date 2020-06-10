@@ -10,6 +10,9 @@
     },
     {
        "name": "bluetooth_flatbuffer_tests"
+    },
+    {
+       "name": "CtsTfliteNnapiDelegateTestCases"
     }
-  ]
+ ]
 }
