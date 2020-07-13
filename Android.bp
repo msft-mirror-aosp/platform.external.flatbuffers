@@ -63,17 +63,18 @@ java_library {
 cc_library {
     name: "libflatbuffers-cpp",
     export_include_dirs: ["include"],
+    cpp_std: "c++17",
     host_supported: true,
     local_include_dirs: [
-        "grpc",
         "include",
     ],
     srcs: [
-        "src/*.cpp",
-        "grpc/src/compiler/*.cc",
-    ],
-    exclude_srcs: [
-        "src/flathash.cpp",
+        "src/code_generators.cpp",
+        "src/idl_gen_fbs.cpp",
+        "src/idl_gen_text.cpp",
+        "src/idl_parser.cpp",
+        "src/reflection.cpp",
+        "src/util.cpp",
     ],
     apex_available: [
         "//apex_available:platform",
