@@ -81,3 +81,42 @@ cc_library {
         "com.android.bluetooth.updatable",
     ],
 }
+
+cc_defaults {
+    name: "flatbuffers_fuzzer_defaults",
+    srcs: [
+        "tests/test_assert.cpp",
+    ],
+    shared_libs: [
+        "liblog",
+        "libflatbuffers-cpp"
+    ],
+    local_include_dirs: [
+        "tests",
+        "tests/fuzzer",
+    ],
+}
+
+cc_fuzz {
+    name: "flatbuffers_parser_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_parser_fuzzer.cc"
+    ],
+}
+
+cc_fuzz {
+    name: "flatbuffers_scalar_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_scalar_fuzzer.cc"
+    ],
+}
+
+cc_fuzz {
+    name: "flatbuffers_verifier_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_verifier_fuzzer.cc"
+    ],
+}
