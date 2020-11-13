@@ -95,6 +95,9 @@ cc_defaults {
         "tests",
         "tests/fuzzer",
     ],
+    fuzz_config: {
+        componentid: 87896
+    }
 }
 
 cc_fuzz {
