@@ -35,7 +35,7 @@ cc_binary_host {
         "-Werror",
         "-Wextra",
         "-Werror=shadow",
-        "-Wno-implicit-fallthrough", // in idl_gen_general.cpp and reflection.cpp
+        "-Wno-implicit-fallthrough", // in reflection.cpp
     ],
 
     local_include_dirs: [
@@ -44,29 +44,11 @@ cc_binary_host {
     ],
 
     srcs: [
-        "src/code_generators.cpp",
-        "src/flatc.cpp",
-        "src/flatc_main.cpp",
-        "src/idl_gen_cpp.cpp",
-        "src/idl_gen_dart.cpp",
-        "src/idl_gen_fbs.cpp",
-        "src/idl_gen_general.cpp",
-        "src/idl_gen_go.cpp",
-        "src/idl_gen_grpc.cpp",
-        "src/idl_gen_js_ts.cpp",
-        "src/idl_gen_json_schema.cpp",
-        "src/idl_gen_lua.cpp",
-        "src/idl_gen_lobster.cpp",
-        "src/idl_gen_php.cpp",
-        "src/idl_gen_python.cpp",
-        "src/idl_gen_rust.cpp",
-        "src/idl_gen_text.cpp",
-        "src/idl_parser.cpp",
-        "src/reflection.cpp",
-        "src/util.cpp",
-        "grpc/src/compiler/cpp_generator.cc",
-        "grpc/src/compiler/go_generator.cc",
-        "grpc/src/compiler/java_generator.cc",
+        "src/*.cpp",
+        "grpc/src/compiler/*.cc",
+    ],
+    exclude_srcs: [
+        "src/flathash.cpp",
     ],
 }
 
@@ -76,4 +58,68 @@ java_library {
     sdk_version: "current",
 
     java_version: "1.8",
+}
+
+cc_library {
+    name: "libflatbuffers-cpp",
+    export_include_dirs: ["include"],
+    cpp_std: "c++17",
+    host_supported: true,
+    local_include_dirs: [
+        "include",
+    ],
+    srcs: [
+        "src/code_generators.cpp",
+        "src/idl_gen_fbs.cpp",
+        "src/idl_gen_text.cpp",
+        "src/idl_parser.cpp",
+        "src/reflection.cpp",
+        "src/util.cpp",
+    ],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.bluetooth.updatable",
+    ],
+}
+
+cc_defaults {
+    name: "flatbuffers_fuzzer_defaults",
+    srcs: [
+        "tests/test_assert.cpp",
+    ],
+    shared_libs: [
+        "liblog",
+        "libflatbuffers-cpp"
+    ],
+    local_include_dirs: [
+        "tests",
+        "tests/fuzzer",
+    ],
+    fuzz_config: {
+        componentid: 87896
+    }
+}
+
+cc_fuzz {
+    name: "flatbuffers_parser_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_parser_fuzzer.cc"
+    ],
+}
+
+cc_fuzz {
+    name: "flatbuffers_scalar_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_scalar_fuzzer.cc"
+    ],
+}
+
+cc_fuzz {
+    name: "flatbuffers_verifier_fuzzer",
+    defaults: ["flatbuffers_fuzzer_defaults"],
+    srcs: [
+        "tests/fuzzer/flatbuffers_verifier_fuzzer.cc"
+    ],
 }
