@@ -16,6 +16,7 @@ cc_library_headers {
     name: "flatbuffer_headers",
     export_include_dirs: ["include"],
     vendor_available: true,
+    host_supported: true,
     sdk_version: "current",
     apex_available: [
         "com.android.neuralnetworks",
@@ -23,6 +24,11 @@ cc_library_headers {
         "com.android.extservices",
         "//apex_available:platform",
     ],
+    target: {
+        darwin: {
+            enabled: false,
+        },
+    },
 }
 
 cc_binary_host {
@@ -65,6 +71,7 @@ cc_library {
     export_include_dirs: ["include"],
     cpp_std: "c++17",
     host_supported: true,
+    vendor_available: true,
     local_include_dirs: [
         "include",
     ],
@@ -80,6 +87,11 @@ cc_library {
         "//apex_available:platform",
         "com.android.bluetooth.updatable",
     ],
+    target: {
+        darwin: {
+            enabled: false,
+        },
+    },
 }
 
 cc_defaults {
