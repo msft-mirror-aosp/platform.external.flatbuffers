@@ -24,11 +24,6 @@ cc_library_headers {
         "com.android.extservices",
         "//apex_available:platform",
     ],
-    target: {
-        darwin: {
-            enabled: false,
-        },
-    },
 }
 
 cc_binary_host {
@@ -87,11 +82,6 @@ cc_library {
         "//apex_available:platform",
         "com.android.bluetooth.updatable",
     ],
-    target: {
-        darwin: {
-            enabled: false,
-        },
-    },
 }
 
 cc_defaults {
