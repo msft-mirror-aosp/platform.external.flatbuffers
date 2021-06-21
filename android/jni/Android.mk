@@ -23,6 +23,9 @@ LOCAL_PATH := $(call realpath-portable,$(LOCAL_PATH))
 # FlatBuffers headers as a module.
 include $(CLEAR_VARS)
 LOCAL_MODULE := flatbuffers
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-Zlib
+LOCAL_LICENSE_CONDITIONS := notice
+LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../../LICENSE $(LOCAL_PATH)/../../LICENSE.txt
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
 LOCAL_EXPORT_CPPFLAGS := -std=c++11 -fexceptions -Wall \
     -DFLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
@@ -33,6 +36,9 @@ include $(BUILD_STATIC_LIBRARY)
 # for projects that want richer functionality.
 include $(CLEAR_VARS)
 LOCAL_MODULE := flatbuffers_extra
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-Zlib
+LOCAL_LICENSE_CONDITIONS := notice
+LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../../LICENSE $(LOCAL_PATH)/../../LICENSE.txt
 LOCAL_SRC_FILES := src/idl_parser.cpp \
                    src/idl_gen_text.cpp \
                    src/reflection.cpp \
@@ -44,6 +50,9 @@ include $(BUILD_STATIC_LIBRARY)
 # FlatBuffers test
 include $(CLEAR_VARS)
 LOCAL_MODULE := FlatBufferTest
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-Zlib
+LOCAL_LICENSE_CONDITIONS := notice
+LOCAL_NOTICE_FILE := $(LOCAL_PATH)/../../LICENSE $(LOCAL_PATH)/../../LICENSE.txt
 LOCAL_SRC_FILES := android/jni/main.cpp \
                    tests/test.cpp \
                    tests/test_assert.h \
