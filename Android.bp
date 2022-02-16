@@ -117,9 +117,8 @@ cc_library {
     ],
     apex_available: [
         "//apex_available:platform",
-        "com.android.bluetooth",
+        "com.android.bluetooth.updatable",
     ],
-    min_sdk_version: "30",
 }
 
 cc_defaults {
