@@ -59,7 +59,6 @@ cc_library_headers {
         "com.android.neuralnetworks",
         "test_com.android.neuralnetworks",
         "com.android.extservices",
-        "com.android.adservices",
         "//apex_available:platform",
     ],
 }
@@ -118,9 +117,8 @@ cc_library {
     ],
     apex_available: [
         "//apex_available:platform",
-        "com.android.bluetooth",
+        "com.android.bluetooth.updatable",
     ],
-    min_sdk_version: "30",
 }
 
 cc_defaults {
