@@ -55,6 +55,7 @@ cc_library_headers {
     vendor_available: true,
     host_supported: true,
     sdk_version: "current",
+    min_sdk_version: "apex_inherit",
     apex_available: [
         "com.android.neuralnetworks",
         "test_com.android.neuralnetworks",
