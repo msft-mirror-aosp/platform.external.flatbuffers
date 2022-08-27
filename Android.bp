@@ -103,7 +103,8 @@ java_library {
 cc_library {
     name: "libflatbuffers-cpp",
     export_include_dirs: ["include"],
-    cpp_std: "c++17",
+    sdk_version: "current",
+    stl: "libc++_static",
     host_supported: true,
     vendor_available: true,
     local_include_dirs: [
@@ -120,6 +121,7 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.btservices",
+        "com.android.extservices",
     ],
     min_sdk_version: "30",
 }
