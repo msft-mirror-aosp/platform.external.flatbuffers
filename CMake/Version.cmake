@@ -4,7 +4,9 @@ set(VERSION_PATCH 7)
 set(VERSION_COMMIT 0)
 
 find_program(GIT git)
-if(GIT AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+# TODO(kaiyili, b/243773680): the upstream version detect script will break the
+# build. Upstream a change to fix this, and revert the following lines.
+if(FALSE AND GIT AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
   execute_process(
       COMMAND ${GIT} describe --tags
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
