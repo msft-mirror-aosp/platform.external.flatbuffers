@@ -96,8 +96,13 @@ java_library {
     name: "flatbuffers-java",
     srcs: ["java/**/*.java"],
     sdk_version: "current",
+    min_sdk_version: "30",
 
     java_version: "1.8",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.ondevicepersonalization",
+    ],
 }
 
 cc_library {
