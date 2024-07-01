@@ -79,6 +79,8 @@ cc_binary_host {
         "-Wno-implicit-fallthrough", // in reflection.cpp
     ],
 
+    rtti: true,
+
     local_include_dirs: [
         "grpc",
         "include",
