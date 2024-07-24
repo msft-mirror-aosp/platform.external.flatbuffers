@@ -57,10 +57,11 @@ cc_library_headers {
     sdk_version: "current",
     min_sdk_version: "apex_inherit",
     apex_available: [
-        "com.android.neuralnetworks",
-        "test_com.android.neuralnetworks",
-        "com.android.extservices",
         "com.android.adservices",
+        "com.android.extservices",
+        "com.android.neuralnetworks",
+        "com.android.ondevicepersonalization",
+        "test_com.android.neuralnetworks",
         "//apex_available:platform",
     ],
 }
@@ -77,6 +78,8 @@ cc_binary_host {
         "-Werror=shadow",
         "-Wno-implicit-fallthrough", // in reflection.cpp
     ],
+
+    rtti: true,
 
     local_include_dirs: [
         "grpc",
