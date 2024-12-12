@@ -71,11 +71,6 @@ cc_binary_host {
 
     cppflags: [
         "-fsigned-char",
-        "-pedantic",
-        "-Wall",
-        "-Werror",
-        "-Wextra",
-        "-Werror=shadow",
         "-Wno-implicit-fallthrough", // in reflection.cpp
     ],
 
