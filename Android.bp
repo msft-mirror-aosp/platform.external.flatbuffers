@@ -61,7 +61,6 @@ cc_library_headers {
         "com.android.extservices",
         "com.android.neuralnetworks",
         "com.android.ondevicepersonalization",
-        "test_com.android.neuralnetworks",
         "//apex_available:platform",
     ],
 }
