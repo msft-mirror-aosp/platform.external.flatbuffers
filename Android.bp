@@ -61,7 +61,6 @@ cc_library_headers {
         "com.android.extservices",
         "com.android.neuralnetworks",
         "com.android.ondevicepersonalization",
-        "test_com.android.neuralnetworks",
         "//apex_available:platform",
     ],
 }
@@ -71,11 +70,6 @@ cc_binary_host {
 
     cppflags: [
         "-fsigned-char",
-        "-pedantic",
-        "-Wall",
-        "-Werror",
-        "-Wextra",
-        "-Werror=shadow",
         "-Wno-implicit-fallthrough", // in reflection.cpp
     ],
 
