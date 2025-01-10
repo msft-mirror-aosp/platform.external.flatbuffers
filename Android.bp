@@ -61,7 +61,6 @@ cc_library_headers {
         "com.android.extservices",
         "com.android.neuralnetworks",
         "com.android.ondevicepersonalization",
-        "test_com.android.neuralnetworks",
         "//apex_available:platform",
     ],
 }
@@ -123,7 +122,7 @@ cc_library {
     ],
     apex_available: [
         "//apex_available:platform",
-        "com.android.btservices",
+        "com.android.bt",
         "com.android.extservices",
     ],
     min_sdk_version: "30",
