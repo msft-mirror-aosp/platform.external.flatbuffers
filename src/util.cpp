@@ -86,11 +86,17 @@ static bool LoadFileRaw(const char *name, bool binary, std::string *buf) {
 LoadFileFunction g_load_file_function = LoadFileRaw;
 FileExistsFunction g_file_exists_function = FileExistsRaw;
 
-static std::string ToCamelCase(const std::string &input, bool first) {
+static std::string ToCamelCase(const std::string &input, bool is_upper) {
   std::string s;
   for (size_t i = 0; i < input.length(); i++) {
-    if (!i && first)
-      s += CharToUpper(input[i]);
+    if (!i && input[i] == '_') {
+      s += input[i];
+      // we ignore leading underscore but make following
+      // alphabet char upper.
+      if (i + 1 < input.length() && is_alpha(input[i + 1]))
+        s += CharToUpper(input[++i]);
+    } else if (!i)
+      s += is_upper ? CharToUpper(input[i]) : CharToLower(input[i]);
     else if (input[i] == '_' && i + 1 < input.length())
       s += CharToUpper(input[++i]);
     else
@@ -109,7 +115,10 @@ static std::string ToSnakeCase(const std::string &input, bool screaming) {
     } else if (!islower(input[i])) {
       // Prevent duplicate underscores for Upper_Snake_Case strings
       // and UPPERCASE strings.
-      if (islower(input[i - 1])) { s += '_'; }
+      if (islower(input[i - 1]) ||
+          (isdigit(input[i - 1]) && !isdigit(input[i]))) {
+        s += '_';
+      }
       s += screaming ? CharToUpper(input[i]) : CharToLower(input[i]);
     } else {
       s += screaming ? CharToUpper(input[i]) : input[i];
@@ -119,7 +128,7 @@ static std::string ToSnakeCase(const std::string &input, bool screaming) {
 }
 
 std::string ToAll(const std::string &input,
-                         std::function<char(const char)> transform) {
+                  std::function<char(const char)> transform) {
   std::string s;
   for (size_t i = 0; i < input.length(); i++) { s += transform(input[i]); }
   return s;
@@ -135,7 +144,10 @@ std::string CamelToSnake(const std::string &input) {
     } else if (!islower(input[i])) {
       // Prevent duplicate underscores for Upper_Snake_Case strings
       // and UPPERCASE strings.
-      if (islower(input[i - 1])) { s += '_'; }
+      if (islower(input[i - 1]) ||
+          (isdigit(input[i - 1]) && !isdigit(input[i]))) {
+        s += '_';
+      }
       s += CharToLower(input[i]);
     } else {
       s += input[i];
@@ -177,7 +189,6 @@ std::string ToDasher(const std::string &input) {
   return s;
 }
 
-
 // Converts foo_bar_123baz_456 to foo_bar123_baz456
 std::string SnakeToSnake2(const std::string &s) {
   if (s.length() <= 1) return s;
@@ -199,8 +210,7 @@ std::string SnakeToSnake2(const std::string &s) {
   return result;
 }
 
-} // namespace
-
+}  // namespace
 
 bool LoadFile(const char *name, bool binary, std::string *buf) {
   FLATBUFFERS_ASSERT(g_load_file_function);
@@ -326,6 +336,10 @@ void EnsureDirExists(const std::string &filepath) {
   // clang-format on
 }
 
+std::string FilePath(const std::string& project, const std::string& filePath, bool absolute) {
+    return (absolute) ? AbsolutePath(filePath) : RelativeToRootPath(project, filePath);
+}
+
 std::string AbsolutePath(const std::string &filepath) {
   // clang-format off
 
@@ -424,29 +438,6 @@ bool ReadEnvironmentVariable(const char *var_name, std::string *_value) {
   if (!env_str) return false;
   if (_value) *_value = std::string(env_str);
   return true;
-}
-
-void SetupDefaultCRTReportMode() {
-  // clang-format off
-
-  #ifdef _MSC_VER
-    // By default, send all reports to STDOUT to prevent CI hangs.
-    // Enable assert report box [Abort|Retry|Ignore] if a debugger is present.
-    const int dbg_mode = (_CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG) |
-                         (IsDebuggerPresent() ? _CRTDBG_MODE_WNDW : 0);
-    (void)dbg_mode; // release mode fix
-    // CrtDebug reports to _CRT_WARN channel.
-    _CrtSetReportMode(_CRT_WARN, dbg_mode);
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
-    // The assert from <assert.h> reports to _CRT_ERROR channel
-    _CrtSetReportMode(_CRT_ERROR, dbg_mode);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
-    // Internal CRT assert channel?
-    _CrtSetReportMode(_CRT_ASSERT, dbg_mode);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
-  #endif
-
-  // clang-format on
 }
 
 std::string ConvertCase(const std::string &input, Case output_case,
