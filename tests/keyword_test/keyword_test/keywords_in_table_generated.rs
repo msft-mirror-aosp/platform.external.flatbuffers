@@ -19,8 +19,8 @@ pub struct KeywordsInTable<'a> {
 impl<'a> flatbuffers::Follow<'a> for KeywordsInTable<'a> {
   type Inner = KeywordsInTable<'a>;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
@@ -35,12 +35,12 @@ impl<'a> KeywordsInTable<'a> {
   }
 
   #[inline]
-  pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     KeywordsInTable { _tab: table }
   }
   #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
-    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
     args: &'args KeywordsInTableArgs
   ) -> flatbuffers::WIPOffset<KeywordsInTable<'bldr>> {
     let mut builder = KeywordsInTableBuilder::new(_fbb);
@@ -66,19 +66,31 @@ impl<'a> KeywordsInTable<'a> {
 
   #[inline]
   pub fn is(&self) -> ABC {
-    self._tab.get::<ABC>(KeywordsInTable::VT_IS, Some(ABC::void)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<ABC>(KeywordsInTable::VT_IS, Some(ABC::void)).unwrap()}
   }
   #[inline]
   pub fn private(&self) -> public {
-    self._tab.get::<public>(KeywordsInTable::VT_PRIVATE, Some(public::NONE)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<public>(KeywordsInTable::VT_PRIVATE, Some(public::NONE)).unwrap()}
   }
   #[inline]
   pub fn type_(&self) -> i32 {
-    self._tab.get::<i32>(KeywordsInTable::VT_TYPE_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i32>(KeywordsInTable::VT_TYPE_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn default(&self) -> bool {
-    self._tab.get::<bool>(KeywordsInTable::VT_DEFAULT, Some(false)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(KeywordsInTable::VT_DEFAULT, Some(false)).unwrap()}
   }
 }
 
@@ -115,11 +127,11 @@ impl<'a> Default for KeywordsInTableArgs {
   }
 }
 
-pub struct KeywordsInTableBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+pub struct KeywordsInTableBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> KeywordsInTableBuilder<'a, 'b> {
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> KeywordsInTableBuilder<'a, 'b, A> {
   #[inline]
   pub fn add_is(&mut self, is: ABC) {
     self.fbb_.push_slot::<ABC>(KeywordsInTable::VT_IS, is, ABC::void);
@@ -137,7 +149,7 @@ impl<'a: 'b, 'b> KeywordsInTableBuilder<'a, 'b> {
     self.fbb_.push_slot::<bool>(KeywordsInTable::VT_DEFAULT, default, false);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> KeywordsInTableBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> KeywordsInTableBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     KeywordsInTableBuilder {
       fbb_: _fbb,
@@ -180,9 +192,9 @@ impl Default for KeywordsInTableT {
   }
 }
 impl KeywordsInTableT {
-  pub fn pack<'b>(
+  pub fn pack<'b, A: flatbuffers::Allocator + 'b>(
     &self,
-    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b, A>
   ) -> flatbuffers::WIPOffset<KeywordsInTable<'b>> {
     let is = self.is;
     let private = self.private;

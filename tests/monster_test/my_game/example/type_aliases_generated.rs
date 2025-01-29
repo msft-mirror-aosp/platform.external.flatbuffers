@@ -19,8 +19,8 @@ pub struct TypeAliases<'a> {
 impl<'a> flatbuffers::Follow<'a> for TypeAliases<'a> {
   type Inner = TypeAliases<'a>;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
@@ -43,12 +43,12 @@ impl<'a> TypeAliases<'a> {
   }
 
   #[inline]
-  pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     TypeAliases { _tab: table }
   }
   #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
-    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
     args: &'args TypeAliasesArgs<'args>
   ) -> flatbuffers::WIPOffset<TypeAliases<'bldr>> {
     let mut builder = TypeAliasesBuilder::new(_fbb);
@@ -79,7 +79,7 @@ impl<'a> TypeAliases<'a> {
     let f32_ = self.f32_();
     let f64_ = self.f64_();
     let v8 = self.v8().map(|x| {
-      x.to_vec()
+      x.into_iter().collect()
     });
     let vf64 = self.vf64().map(|x| {
       x.into_iter().collect()
@@ -102,51 +102,87 @@ impl<'a> TypeAliases<'a> {
 
   #[inline]
   pub fn i8_(&self) -> i8 {
-    self._tab.get::<i8>(TypeAliases::VT_I8_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i8>(TypeAliases::VT_I8_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn u8_(&self) -> u8 {
-    self._tab.get::<u8>(TypeAliases::VT_U8_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(TypeAliases::VT_U8_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn i16_(&self) -> i16 {
-    self._tab.get::<i16>(TypeAliases::VT_I16_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i16>(TypeAliases::VT_I16_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn u16_(&self) -> u16 {
-    self._tab.get::<u16>(TypeAliases::VT_U16_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u16>(TypeAliases::VT_U16_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn i32_(&self) -> i32 {
-    self._tab.get::<i32>(TypeAliases::VT_I32_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i32>(TypeAliases::VT_I32_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn u32_(&self) -> u32 {
-    self._tab.get::<u32>(TypeAliases::VT_U32_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(TypeAliases::VT_U32_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn i64_(&self) -> i64 {
-    self._tab.get::<i64>(TypeAliases::VT_I64_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i64>(TypeAliases::VT_I64_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn u64_(&self) -> u64 {
-    self._tab.get::<u64>(TypeAliases::VT_U64_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(TypeAliases::VT_U64_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn f32_(&self) -> f32 {
-    self._tab.get::<f32>(TypeAliases::VT_F32_, Some(0.0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<f32>(TypeAliases::VT_F32_, Some(0.0)).unwrap()}
   }
   #[inline]
   pub fn f64_(&self) -> f64 {
-    self._tab.get::<f64>(TypeAliases::VT_F64_, Some(0.0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<f64>(TypeAliases::VT_F64_, Some(0.0)).unwrap()}
   }
   #[inline]
-  pub fn v8(&self) -> Option<&'a [i8]> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, i8>>>(TypeAliases::VT_V8, None).map(|v| v.safe_slice())
+  pub fn v8(&self) -> Option<flatbuffers::Vector<'a, i8>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, i8>>>(TypeAliases::VT_V8, None)}
   }
   #[inline]
   pub fn vf64(&self) -> Option<flatbuffers::Vector<'a, f64>> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, f64>>>(TypeAliases::VT_VF64, None)
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, f64>>>(TypeAliases::VT_VF64, None)}
   }
 }
 
@@ -207,11 +243,11 @@ impl<'a> Default for TypeAliasesArgs<'a> {
   }
 }
 
-pub struct TypeAliasesBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+pub struct TypeAliasesBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> TypeAliasesBuilder<'a, 'b> {
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> TypeAliasesBuilder<'a, 'b, A> {
   #[inline]
   pub fn add_i8_(&mut self, i8_: i8) {
     self.fbb_.push_slot::<i8>(TypeAliases::VT_I8_, i8_, 0);
@@ -261,7 +297,7 @@ impl<'a: 'b, 'b> TypeAliasesBuilder<'a, 'b> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TypeAliases::VT_VF64, vf64);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> TypeAliasesBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> TypeAliasesBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     TypeAliasesBuilder {
       fbb_: _fbb,
@@ -328,9 +364,9 @@ impl Default for TypeAliasesT {
   }
 }
 impl TypeAliasesT {
-  pub fn pack<'b>(
+  pub fn pack<'b, A: flatbuffers::Allocator + 'b>(
     &self,
-    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b, A>
   ) -> flatbuffers::WIPOffset<TypeAliases<'b>> {
     let i8_ = self.i8_;
     let u8_ = self.u8_;
