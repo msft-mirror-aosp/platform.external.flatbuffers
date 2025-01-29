@@ -80,6 +80,7 @@ cc_binary_host {
     ],
 
     srcs: [
+        "include/codegen/python.cc",
         "src/*.cpp",
         "grpc/src/compiler/*.cc",
     ],
@@ -90,7 +91,7 @@ cc_binary_host {
 
 java_library {
     name: "flatbuffers-java",
-    srcs: ["java/**/*.java"],
+    srcs: ["java/src/main/**/*.java"],
     sdk_version: "current",
     min_sdk_version: "30",
 
