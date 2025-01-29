@@ -45,7 +45,6 @@ license {
     ],
     license_text: [
         "LICENSE",
-        "LICENSE.txt",
     ],
 }
 
