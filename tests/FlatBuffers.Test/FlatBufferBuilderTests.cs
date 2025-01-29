@@ -15,8 +15,9 @@
  */
 
 using System;
+using System.Diagnostics;
 
-namespace FlatBuffers.Test
+namespace Google.FlatBuffers.Test
 {
     [FlatBuffersTestClass]
     public class FlatBufferBuilderTests
@@ -586,12 +587,14 @@ namespace FlatBuffers.Test
         [FlatBuffersTestMethod]
         public void FlatBufferBuilder_Add_ArraySegment_Default_Throws()
         {
-            var fbb = CreateBuffer(false);
+#if NETCOREAPP
+      var fbb = CreateBuffer(false);
 
             // Construct the data array
-            ArraySegment<float> data = default;
+            ArraySegment<float> data = default(ArraySegment<float>);
 
             Assert.Throws<ArgumentNullException>(() => fbb.Add(data));
+#endif
         }
             
         [FlatBuffersTestMethod]
