@@ -21,8 +21,8 @@ pub struct TableB<'a> {
 impl<'a> flatbuffers::Follow<'a> for TableB<'a> {
   type Inner = TableB<'a>;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
@@ -34,12 +34,12 @@ impl<'a> TableB<'a> {
   }
 
   #[inline]
-  pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     TableB { _tab: table }
   }
   #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
-    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
     args: &'args TableBArgs<'args>
   ) -> flatbuffers::WIPOffset<TableB<'bldr>> {
     let mut builder = TableBBuilder::new(_fbb);
@@ -58,7 +58,10 @@ impl<'a> TableB<'a> {
 
   #[inline]
   pub fn a(&self) -> Option<super::super::TableA<'a>> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<super::super::TableA>>(TableB::VT_A, None)
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<super::super::TableA>>(TableB::VT_A, None)}
   }
 }
 
@@ -101,17 +104,17 @@ impl Serialize for TableB<'_> {
   }
 }
 
-pub struct TableBBuilder<'a: 'b, 'b> {
-  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+pub struct TableBBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> TableBBuilder<'a, 'b> {
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> TableBBuilder<'a, 'b, A> {
   #[inline]
   pub fn add_a(&mut self, a: flatbuffers::WIPOffset<super::super::TableA<'b >>) {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<super::super::TableA>>(TableB::VT_A, a);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> TableBBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> TableBBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     TableBBuilder {
       fbb_: _fbb,
@@ -145,9 +148,9 @@ impl Default for TableBT {
   }
 }
 impl TableBT {
-  pub fn pack<'b>(
+  pub fn pack<'b, A: flatbuffers::Allocator + 'b>(
     &self,
-    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b, A>
   ) -> flatbuffers::WIPOffset<TableB<'b>> {
     let a = self.a.as_ref().map(|x|{
       x.pack(_fbb)
