@@ -12,7 +12,7 @@ use super::*;
 #[allow(non_upper_case_globals)]
 mod bitflags_long_enum {
   flatbuffers::bitflags::bitflags! {
-    #[derive(Default)]
+    #[derive(Default, Debug, Clone, Copy, PartialEq)]
     pub struct LongEnum: u64 {
       const LongOne = 2;
       const LongTwo = 4;
@@ -25,33 +25,31 @@ pub use self::bitflags_long_enum::LongEnum;
 impl<'a> flatbuffers::Follow<'a> for LongEnum {
   type Inner = Self;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    let b = unsafe {
-      flatbuffers::read_scalar_at::<u64>(buf, loc)
-    };
-    unsafe { Self::from_bits_unchecked(b) }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = flatbuffers::read_scalar_at::<u64>(buf, loc);
+    Self::from_bits_retain(b)
   }
 }
 
 impl flatbuffers::Push for LongEnum {
     type Output = LongEnum;
     #[inline]
-    fn push(&self, dst: &mut [u8], _rest: &[u8]) {
-        unsafe { flatbuffers::emplace_scalar::<u64>(dst, self.bits()); }
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        flatbuffers::emplace_scalar::<u64>(dst, self.bits());
     }
 }
 
 impl flatbuffers::EndianScalar for LongEnum {
+  type Scalar = u64;
   #[inline]
-  fn to_little_endian(self) -> Self {
-    let b = u64::to_le(self.bits());
-    unsafe { Self::from_bits_unchecked(b) }
+  fn to_little_endian(self) -> u64 {
+    self.bits().to_le()
   }
   #[inline]
   #[allow(clippy::wrong_self_convention)]
-  fn from_little_endian(self) -> Self {
-    let b = u64::from_le(self.bits());
-    unsafe { Self::from_bits_unchecked(b) }
+  fn from_little_endian(v: u64) -> Self {
+    let b = u64::from_le(v);
+    Self::from_bits_retain(b)
   }
 }
 
