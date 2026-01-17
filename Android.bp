@@ -98,6 +98,7 @@ java_library {
     java_version: "1.8",
     apex_available: [
         "//apex_available:platform",
+        "com.android.conscrypt",
         "com.android.ondevicepersonalization",
     ],
 }
