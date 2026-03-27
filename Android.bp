@@ -52,6 +52,7 @@ cc_library_headers {
     name: "flatbuffer_headers",
     export_include_dirs: ["include"],
     vendor_available: true,
+    product_available: true,
     host_supported: true,
     sdk_version: "current",
     min_sdk_version: "apex_inherit",
