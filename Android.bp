@@ -102,6 +102,7 @@ java_library {
         "com.android.conscrypt",
         "com.android.tethering",
         "com.android.ondevicepersonalization",
+        "com.android.virt",
     ],
 }
 
