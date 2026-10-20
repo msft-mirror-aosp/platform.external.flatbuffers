@@ -33,7 +33,7 @@ mutate_distance(value:number):boolean {
   return true;
 }
 
-static getFullyQualifiedName(): "MyGame.Example.Ability" {
+static getFullyQualifiedName():string {
   return 'MyGame.Example.Ability';
 }
 

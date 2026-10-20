@@ -17,10 +17,13 @@
 package com.google.flatbuffers;
 
 import static com.google.flatbuffers.Constants.*;
-
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 
-/** Helper type for accessing vector of unions. */
+/**
+ * Helper type for accessing vector of unions.
+ */
 public final class UnionVector extends BaseVector {
   /**
    * Assigns vector access object to vector data.
@@ -29,12 +32,12 @@ public final class UnionVector extends BaseVector {
    * @param _element_size Size of a vector element.
    * @param _bb Table's ByteBuffer.
    * @return Returns current vector access object assigned to vector data whose offset is stored at
-   *     `vector`.
+   *         `vector`.
    */
   public UnionVector __assign(int _vector, int _element_size, ByteBuffer _bb) {
-    __reset(_vector, _element_size, _bb);
-    return this;
+    __reset(_vector, _element_size, _bb); return this;
   }
+
 
   /**
    * Initialize any Table-derived type to point to the union at the given `index`.

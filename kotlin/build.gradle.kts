@@ -1,6 +1,7 @@
-import java.nio.charset.StandardCharsets
+import org.gradle.internal.impldep.org.testng.ITestResult.STARTED
 import org.jetbrains.kotlin.gradle.dsl.KotlinCommonOptions
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.nio.charset.StandardCharsets
 
 buildscript {
   repositories {
@@ -25,8 +26,7 @@ allprojects {
 
 tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<KotlinCommonOptions>>().configureEach {
   kotlinOptions {
-    freeCompilerArgs +=
-      "-progressive" // https://kotlinlang.org/docs/whatsnew13.html#progressive-mode
+    freeCompilerArgs += "-progressive" // https://kotlinlang.org/docs/whatsnew13.html#progressive-mode
   }
 }
 

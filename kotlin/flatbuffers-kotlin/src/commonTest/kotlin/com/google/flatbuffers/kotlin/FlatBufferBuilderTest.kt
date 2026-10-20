@@ -18,17 +18,19 @@
 package com.google.flatbuffers.kotlin
 
 import Attacker
+import AttackerOffsetArray
 import CharacterEArray
-import Movie
 import dictionaryLookup.LongFloatEntry
-import dictionaryLookup.LongFloatEntryOffsetArray
 import dictionaryLookup.LongFloatMap
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import Movie
+import dictionaryLookup.LongFloatEntryOffsetArray
 import myGame.example.*
 import myGame.example.Test.Companion.createTest
 import optionalScalars.OptionalByte
 import optionalScalars.ScalarStuff
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
 
 @ExperimentalUnsignedTypes
 class FlatBufferBuilderTest {
@@ -41,8 +43,10 @@ class FlatBufferBuilderTest {
     val inv = Monster.createInventoryVector(fbb, invValues)
     Monster.startMonster(fbb)
     Monster.addPos(
-      fbb,
-      Vec3.createVec3(fbb, 1.0f, 2.0f, 3.0f, 3.0, Color.Green, 5.toShort(), 6.toByte()),
+      fbb, Vec3.createVec3(
+        fbb, 1.0f, 2.0f, 3.0f, 3.0,
+        Color.Green, 5.toShort(), 6.toByte()
+      )
     )
     Monster.addHp(fbb, 80.toShort())
     Monster.addName(fbb, name)
@@ -82,14 +86,12 @@ class FlatBufferBuilderTest {
   @Test
   fun testSortedVector() {
     val fbb = FlatBufferBuilder()
-    val names =
-      arrayOf(fbb.createString("Frodo"), fbb.createString("Barney"), fbb.createString("Wilma"))
-    val monsters =
-      MonsterOffsetArray(3) {
-        Monster.startMonster(fbb)
-        Monster.addName(fbb, names[it])
-        Monster.endMonster(fbb)
-      }
+    val names = arrayOf(fbb.createString("Frodo"), fbb.createString("Barney"), fbb.createString("Wilma"))
+    val monsters = MonsterOffsetArray(3) {
+      Monster.startMonster(fbb)
+      Monster.addName(fbb, names[it])
+      Monster.endMonster(fbb)
+    }
     val ary = Monster.createTestarrayoftablesVector(fbb, monsters)
     Monster.startMonster(fbb)
     Monster.addName(fbb, names[0])
@@ -159,8 +161,7 @@ class FlatBufferBuilderTest {
   @Test
   fun testBuilderBasics() {
     val fbb = FlatBufferBuilder()
-    val names =
-      arrayOf(fbb.createString("Frodo"), fbb.createString("Barney"), fbb.createString("Wilma"))
+    val names = arrayOf(fbb.createString("Frodo"), fbb.createString("Barney"), fbb.createString("Wilma"))
     val off = Array<Offset<Monster>>(3) { Offset(0) }
     Monster.startMonster(fbb)
     Monster.addName(fbb, names[0])
@@ -175,7 +176,7 @@ class FlatBufferBuilderTest {
 
     // We set up the same values as monsterdata.json:
 
-    val inv = Monster.createInventoryVector(fbb, byteArrayOf(0, 1, 2, 3, 4).toUByteArray())
+    val inv = Monster.createInventoryVector(fbb, byteArrayOf(0,1,2,3,4).toUByteArray())
 
     val fred = fbb.createString("Fred")
     Monster.startMonster(fbb)
@@ -188,14 +189,15 @@ class FlatBufferBuilderTest {
     val test4 = fbb.endVector<myGame.example.Test>()
 
     val strings = StringOffsetArray(2) { fbb.createString("test$it") }
-    val testArrayOfString = Monster.createTestarrayofstringVector(fbb, strings)
+    val testArrayOfString =
+      Monster.createTestarrayofstringVector(fbb, strings)
 
     Monster.startMonster(fbb)
     Monster.addName(fbb, names[0])
-    Monster.addPos(
-      fbb,
-      Vec3.createVec3(fbb, 1.0f, 2.0f, 3.0f, 3.0, Color.Green, 5.toShort(), 6.toByte()),
-    )
+    Monster.addPos(fbb, Vec3.createVec3(
+      fbb, 1.0f, 2.0f, 3.0f, 3.0,
+      Color.Green, 5.toShort(), 6.toByte()
+    ))
     Monster.addHp(fbb, 80)
     Monster.addMana(fbb, 150)
     Monster.addInventory(fbb, inv)
@@ -208,7 +210,7 @@ class FlatBufferBuilderTest {
     Monster.addTestarrayoftables(fbb, sortMons)
     val mon = Monster.endMonster(fbb)
     Monster.finishMonsterBuffer(fbb, mon)
-    // Attempt to mutate Monster fields and check whether the buffer has been mutated properly
+    //Attempt to mutate Monster fields and check whether the buffer has been mutated properly
     // revert to original values after testing
     val monster = Monster.asRoot(fbb.dataBuffer())
 
@@ -253,11 +255,13 @@ class FlatBufferBuilderTest {
         CharacterE.MuLan,
         attacker,
         Movie.createCharactersTypeVector(fbb, characters),
-        Movie.createCharactersVector(fbb, attackers),
-      ),
+        Movie.createCharactersVector(fbb, attackers)
+      )
     )
 
     val movie: Movie = Movie.asRoot(fbb.dataBuffer())
+
+
 
     assertEquals(movie.charactersTypeLength, 1)
     assertEquals(movie.charactersLength, 1)
@@ -322,7 +326,7 @@ class FlatBufferBuilderTest {
     fbb.clear()
 
     val largeData = ByteArray(1024)
-    offset = fbb.createByteVector(largeData) as VectorOffset<UByte> // TODO: fix me
+    offset = fbb.createByteVector(largeData) as VectorOffset<UByte> //TODO: fix me
     str = fbb.createString("ByteMonster")
     Monster.startMonster(fbb)
     Monster.addName(fbb, str)
@@ -336,7 +340,7 @@ class FlatBufferBuilderTest {
     fbb.clear()
 
     var bb = ArrayReadBuffer(largeData, 512)
-    offset = fbb.createByteVector(bb) as VectorOffset<UByte> // TODO: fix me
+    offset = fbb.createByteVector(bb) as VectorOffset<UByte> //TODO: fix me
     str = fbb.createString("ByteMonster")
     Monster.startMonster(fbb)
     Monster.addName(fbb, str)
@@ -350,7 +354,7 @@ class FlatBufferBuilderTest {
 
     bb = ArrayReadBuffer(largeData, largeData.size - 216)
     val stringBuffer = ArrayReadBuffer("AlreadyBufferedString".encodeToByteArray())
-    offset = fbb.createByteVector(bb) as VectorOffset<UByte> // TODO: fix me
+    offset = fbb.createByteVector(bb) as VectorOffset<UByte> //TODO: fix me
     str = fbb.createString(stringBuffer)
     Monster.startMonster(fbb)
     Monster.addName(fbb, str)
@@ -503,19 +507,19 @@ class FlatBufferBuilderTest {
     assertEquals(scalarStuff.defaultEnum, OptionalByte.Two)
   }
 
-  // @todo Seems like nesting code generation is broken for all generators.
-  // disabling test for now.
-  //  @Test
-  //  fun testNamespaceNesting() {
-  //    // reference / manipulate these to verify compilation
-  //    val fbb = FlatBufferBuilder(1)
-  //    TableInNestedNS.startTableInNestedNS(fbb)
-  //    TableInNestedNS.addFoo(fbb, 1234)
-  //    val nestedTableOff = TableInNestedNS.endTableInNestedNs(fbb)
-  //    TableInFirstNS.startTableInFirstNS(fbb)
-  //    TableInFirstNS.addFooTable(fbb, nestedTableOff)
-  //    TableInFirstNS.endTableInFirstNs(fbb)
-  //  }
+// @todo Seems like nesting code generation is broken for all generators.
+// disabling test for now.
+//  @Test
+//  fun testNamespaceNesting() {
+//    // reference / manipulate these to verify compilation
+//    val fbb = FlatBufferBuilder(1)
+//    TableInNestedNS.startTableInNestedNS(fbb)
+//    TableInNestedNS.addFoo(fbb, 1234)
+//    val nestedTableOff = TableInNestedNS.endTableInNestedNs(fbb)
+//    TableInFirstNS.startTableInFirstNS(fbb)
+//    TableInFirstNS.addFooTable(fbb, nestedTableOff)
+//    TableInFirstNS.endTableInFirstNs(fbb)
+//  }
 
   @Test
   fun testNestedFlatBuffer() {
@@ -554,8 +558,7 @@ class FlatBufferBuilderTest {
   fun testDictionaryLookup() {
     val fbb = FlatBufferBuilder(16)
     val lfIndex = LongFloatEntry.createLongFloatEntry(fbb, 0, 99.0f)
-    val vectorEntriesIdx =
-      LongFloatMap.createEntriesVector(fbb, LongFloatEntryOffsetArray(1) { lfIndex })
+    val vectorEntriesIdx = LongFloatMap.createEntriesVector(fbb, LongFloatEntryOffsetArray(1) { lfIndex })
     val rootIdx = LongFloatMap.createLongFloatMap(fbb, vectorEntriesIdx)
     LongFloatMap.finishLongFloatMapBuffer(fbb, rootIdx)
     val map: LongFloatMap = LongFloatMap.asRoot(fbb.dataBuffer())

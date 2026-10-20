@@ -1,4 +1,4 @@
-![logo](https://flatbuffers.dev/assets/flatbuffers_logo.svg) FlatBuffers
+![logo](http://google.github.io/flatbuffers/fpl_logo_small.png) FlatBuffers
 ===========
 
 ![Build status](https://github.com/google/flatbuffers/actions/workflows/build.yml/badge.svg?branch=master)

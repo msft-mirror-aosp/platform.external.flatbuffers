@@ -26,249 +26,192 @@ public struct ByteBuffer {
   /// deallocating the memory that was held by (memory: UnsafeMutableRawPointer)
   @usableFromInline
   final class Storage {
-    @usableFromInline
-    enum Blob {
-      #if !os(WASI)
-        case data(Data)
-        case bytes(ContiguousBytes)
-      #endif
-
-      case byteBuffer(_InternalByteBuffer)
-      case array([UInt8])
-      case pointer(UnsafeMutableRawPointer)
-    }
-
-    /// This storage doesn't own the memory, therefore, we won't deallocate on deinit.
-    private let isOwned: Bool
+    // This storage doesn't own the memory, therefore, we won't deallocate on deinit.
+    private let unowned: Bool
+    /// pointer to the start of the buffer object in memory
+    var memory: UnsafeMutableRawPointer
     /// Capacity of UInt8 the buffer can hold
-    private let capacity: Int
-    /// Retained blob of data that requires the storage to retain a pointer to.
-    @usableFromInline
-    var retainedBlob: Blob
+    var capacity: Int
 
     @usableFromInline
-    init(count: Int) {
-      let memory = UnsafeMutableRawPointer.allocate(
+    init(count: Int, alignment: Int) {
+      memory = UnsafeMutableRawPointer.allocate(
         byteCount: count,
-        alignment: MemoryLayout<UInt8>.alignment)
+        alignment: alignment)
       capacity = count
-      retainedBlob = .pointer(memory)
-      isOwned = true
+      unowned = false
     }
 
     @usableFromInline
-    init(blob: Blob, capacity count: Int) {
-      capacity = count
-      retainedBlob = blob
-      isOwned = false
+    init(memory: UnsafeMutableRawPointer, capacity: Int, unowned: Bool) {
+      self.memory = memory
+      self.capacity = capacity
+      self.unowned = unowned
     }
 
     deinit {
-      guard isOwned else { return }
-      switch retainedBlob {
-      case .pointer(let unsafeMutableRawPointer):
-        unsafeMutableRawPointer.deallocate()
-      default: break
+      if !unowned {
+        memory.deallocate()
       }
     }
 
     @usableFromInline
     func copy(from ptr: UnsafeRawPointer, count: Int) {
       assert(
-        isOwned,
+        !unowned,
         "copy should NOT be called on a buffer that is built by assumingMemoryBound")
-      withUnsafeRawPointer {
-        $0.copyMemory(from: ptr, byteCount: count)
-      }
+      memory.copyMemory(from: ptr, byteCount: count)
     }
 
     @usableFromInline
     func initialize(for size: Int) {
       assert(
-        isOwned,
+        !unowned,
         "initalize should NOT be called on a buffer that is built by assumingMemoryBound")
-      withUnsafeRawPointer {
-        memset($0, 0, size)
-      }
+      memset(memory, 0, size)
     }
 
-    @discardableResult
-    @inline(__always)
-    func withUnsafeBytes<T>(
-      _ body: (UnsafeRawBufferPointer) throws
-        -> T
-    ) rethrows -> T {
-      switch retainedBlob {
-      case .byteBuffer(let byteBuffer):
-        return try byteBuffer.withUnsafeBytes(body)
-      #if !os(WASI)
-        case .data(let data):
-          return try data.withUnsafeBytes(body)
-        case .bytes(let contiguousBytes):
-          return try contiguousBytes.withUnsafeBytes(body)
-      #endif
-      case .array(let array):
-        return try array.withUnsafeBytes(body)
-      case .pointer(let ptr):
-        return try body(UnsafeRawBufferPointer(start: ptr, count: capacity))
+    /// Reallocates the buffer incase the object to be written doesnt fit in the current buffer
+    /// - Parameter size: Size of the current object
+    @usableFromInline
+    func reallocate(_ size: Int, writerSize: Int, alignment: Int) {
+      let currentWritingIndex = capacity &- writerSize
+      while capacity <= writerSize &+ size {
+        capacity = capacity << 1
       }
-    }
 
-    @discardableResult
-    @inline(__always)
-    func withUnsafeRawPointer<T>(
-      _ body: (UnsafeMutableRawPointer) throws
-        -> T
-    ) rethrows -> T {
-      switch retainedBlob {
-      case .byteBuffer(let byteBuffer):
-        return try byteBuffer.withUnsafeRawPointer(body)
-      #if !os(WASI)
-        case .data(let data):
-          return
-            try data
-            .withUnsafeBytes {
-              try body(UnsafeMutableRawPointer(mutating: $0.baseAddress!))
-            }
-        case .bytes(let contiguousBytes):
-          return
-            try contiguousBytes
-            .withUnsafeBytes {
-              try body(UnsafeMutableRawPointer(mutating: $0.baseAddress!))
-            }
-      #endif
-      case .array(let array):
-        return
-          try array
-          .withUnsafeBytes {
-            try body(UnsafeMutableRawPointer(mutating: $0.baseAddress!))
-          }
-      case .pointer(let ptr):
-        return try body(ptr)
-      }
-    }
+      /// solution take from Apple-NIO
+      capacity = capacity.convertToPowerofTwo
 
-    @discardableResult
-    @inline(__always)
-    func readWithUnsafeRawPointer<T>(
-      position: Int,
-      _ body: (UnsafeRawPointer) throws -> T
-    ) rethrows -> T {
-      switch retainedBlob {
-      case .byteBuffer(let byteBuffer):
-        return try byteBuffer.readWithUnsafeRawPointer(position: position, body)
-      #if !os(WASI)
-        case .data(let data):
-          return try data.withUnsafeBytes {
-            try body($0.baseAddress!.advanced(by: position))
-          }
-        case .bytes(let contiguousBytes):
-          return try contiguousBytes.withUnsafeBytes {
-            try body($0.baseAddress!.advanced(by: position))
-          }
-      #endif
-      case .array(let array):
-        return try array.withUnsafeBytes {
-          try body($0.baseAddress!.advanced(by: position))
-        }
-      case .pointer(let ptr):
-        return try body(ptr.advanced(by: position))
-      }
+      let newData = UnsafeMutableRawPointer.allocate(
+        byteCount: capacity,
+        alignment: alignment)
+      memset(newData, 0, capacity &- writerSize)
+      memcpy(
+        newData.advanced(by: capacity &- writerSize),
+        memory.advanced(by: currentWritingIndex),
+        writerSize)
+      memory.deallocate()
+      memory = newData
     }
   }
 
   @usableFromInline var _storage: Storage
 
   /// The size of the elements written to the buffer + their paddings
-  private var _readerIndex: Int = 0
+  private var _writerSize: Int = 0
+  /// Alignment of the current  memory being written to the buffer
+  var alignment = 1
+  /// Current Index which is being used to write to the buffer, it is written from the end to the start of the buffer
+  var writerIndex: Int { _storage.capacity &- _writerSize }
+
   /// Reader is the position of the current Writer Index (capacity - size)
-  public var reader: Int { capacity &- _readerIndex }
+  public var reader: Int { writerIndex }
   /// Current size of the buffer
-  public var size: UOffset { UOffset(_readerIndex) }
+  public var size: UOffset { UOffset(_writerSize) }
+  /// Public Pointer to the buffer object in memory. This should NOT be modified for any reason
+  public var memory: UnsafeMutableRawPointer { _storage.memory }
   /// Current capacity for the buffer
-  public let capacity: Int
-
-  /// Constructor that creates a Flatbuffer object from an InternalByteBuffer
-  /// - Parameter
-  ///   - bytes: Array of UInt8
-  @inline(__always)
-  init(byteBuffer: _InternalByteBuffer) {
-    _storage = Storage(
-      blob: .byteBuffer(byteBuffer),
-      capacity: byteBuffer.capacity)
-    _readerIndex = Int(byteBuffer.size)
-    self.capacity = byteBuffer.capacity
-  }
-
-  /// Constructor that creates a Flatbuffer from unsafe memory region by copying
-  /// the underlying data to a new pointer
-  ///
-  /// - Parameters:
-  ///   - copyingMemoryBound: The unsafe memory region
-  ///   - capacity: The size of the given memory region
-  @inline(__always)
-  public init(
-    copyingMemoryBound memory: UnsafeRawPointer,
-    capacity: Int
-  ) {
-    _storage = Storage(count: capacity)
-    _storage.copy(from: memory, count: capacity)
-    _readerIndex = capacity
-    self.capacity = capacity
-  }
+  public var capacity: Int { _storage.capacity }
+  /// Crash if the trying to read an unaligned buffer instead of allowing users to read them.
+  public let allowReadingUnalignedBuffers: Bool
 
   /// Constructor that creates a Flatbuffer object from a UInt8
   /// - Parameter
   ///   - bytes: Array of UInt8
-  @inline(__always)
-  public init(bytes: [UInt8]) {
-    _storage = Storage(blob: .array(bytes), capacity: bytes.count)
-    _readerIndex = bytes.count
-    capacity = bytes.count
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
+  public init(
+    bytes: [UInt8],
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    var b = bytes
+    _storage = Storage(count: bytes.count, alignment: alignment)
+    _writerSize = _storage.capacity
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
+    b.withUnsafeMutableBytes { bufferPointer in
+      _storage.copy(from: bufferPointer.baseAddress!, count: bytes.count)
+    }
   }
 
   #if !os(WASI)
-    /// Constructor that creates a Flatbuffer from the Swift Data type object
-    /// - Parameter
-    ///   - data: Swift data Object
-    @inline(__always)
-    public init(data: Data) {
-      _storage = Storage(blob: .data(data), capacity: data.count)
-      _readerIndex = data.count
-      capacity = data.count
+  /// Constructor that creates a Flatbuffer from the Swift Data type object
+  /// - Parameter
+  ///   - data: Swift data Object
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
+  public init(
+    data: Data,
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    var b = data
+    _storage = Storage(count: data.count, alignment: alignment)
+    _writerSize = _storage.capacity
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
+    b.withUnsafeMutableBytes { bufferPointer in
+      _storage.copy(from: bufferPointer.baseAddress!, count: data.count)
     }
+  }
+  #endif
 
-    /// Constructor that creates a Flatbuffer object from a ContiguousBytes
-    /// - Parameters:
-    ///   - contiguousBytes: Binary stripe to use as the buffer
-    ///   - count: amount of readable bytes
-    @inline(__always)
-    public init<Bytes: ContiguousBytes>(
-      contiguousBytes: Bytes,
-      count: Int
-    ) {
-      _storage = Storage(blob: .bytes(contiguousBytes), capacity: count)
-      _readerIndex = count
-      self.capacity = count
+  /// Constructor that creates a Flatbuffer instance with a size
+  /// - Parameter:
+  ///   - size: Length of the buffer
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
+  init(initialSize size: Int) {
+    let size = size.convertToPowerofTwo
+    _storage = Storage(count: size, alignment: alignment)
+    _storage.initialize(for: size)
+    allowReadingUnalignedBuffers = false
+  }
+
+  #if swift(>=5.0) && !os(WASI)
+  /// Constructor that creates a Flatbuffer object from a ContiguousBytes
+  /// - Parameters:
+  ///   - contiguousBytes: Binary stripe to use as the buffer
+  ///   - count: amount of readable bytes
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
+  public init<Bytes: ContiguousBytes>(
+    contiguousBytes: Bytes,
+    count: Int,
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    _storage = Storage(count: count, alignment: alignment)
+    _writerSize = _storage.capacity
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
+    contiguousBytes.withUnsafeBytes { buf in
+      _storage.copy(from: buf.baseAddress!, count: buf.count)
     }
+  }
   #endif
 
   /// Constructor that creates a Flatbuffer from unsafe memory region without copying
-  /// **NOTE** Needs a call to `memory.deallocate()` later on to free the memory
-  ///
-  /// - Parameters:
+  /// - Parameter:
   ///   - assumingMemoryBound: The unsafe memory region
   ///   - capacity: The size of the given memory region
-  @inline(__always)
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
   public init(
     assumingMemoryBound memory: UnsafeMutableRawPointer,
-    capacity: Int
-  ) {
-    _storage = Storage(
-      blob: .pointer(memory),
-      capacity: capacity)
-    _readerIndex = capacity
-    self.capacity = capacity
+    capacity: Int,
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    _storage = Storage(memory: memory, capacity: capacity, unowned: true)
+    _writerSize = capacity
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
+  }
+
+  /// Creates a copy of the buffer that's being built by calling sizedBuffer
+  /// - Parameters:
+  ///   - memory: Current memory of the buffer
+  ///   - count: count of bytes
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
+  init(
+    memory: UnsafeMutableRawPointer,
+    count: Int,
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    _storage = Storage(count: count, alignment: alignment)
+    _storage.copy(from: memory, count: count)
+    _writerSize = _storage.capacity
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
   }
 
   /// Creates a copy of the existing flatbuffer, by copying it to a different memory.
@@ -276,15 +219,145 @@ public struct ByteBuffer {
   ///   - memory: Current memory of the buffer
   ///   - count: count of bytes
   ///   - removeBytes: Removes a number of bytes from the current size
-  @inline(__always)
+  ///   - allowReadingUnalignedBuffers: allow reading from unaligned buffer
   init(
-    blob: Storage.Blob,
+    memory: UnsafeMutableRawPointer,
     count: Int,
-    removing removeBytes: Int
-  ) {
-    _storage = Storage(blob: blob, capacity: count)
-    _readerIndex = removeBytes
-    capacity = count
+    removing removeBytes: Int,
+    allowReadingUnalignedBuffers allowUnalignedBuffers: Bool = false)
+  {
+    _storage = Storage(count: count, alignment: alignment)
+    _storage.copy(from: memory, count: count)
+    _writerSize = removeBytes
+    allowReadingUnalignedBuffers = allowUnalignedBuffers
+  }
+
+  /// Fills the buffer with padding by adding to the writersize
+  /// - Parameter padding: Amount of padding between two to be serialized objects
+  @inline(__always)
+  @usableFromInline
+  mutating func fill(padding: Int) {
+    assert(padding >= 0, "Fill should be larger than or equal to zero")
+    ensureSpace(size: padding)
+    _writerSize = _writerSize &+ (MemoryLayout<UInt8>.size &* padding)
+  }
+
+  /// Adds an array of type Scalar to the buffer memory
+  /// - Parameter elements: An array of Scalars
+  @inline(__always)
+  @usableFromInline
+  mutating func push<T: Scalar>(elements: [T]) {
+    elements.withUnsafeBytes { ptr in
+      ensureSpace(size: ptr.count)
+      memcpy(
+        _storage.memory.advanced(by: writerIndex &- ptr.count),
+        ptr.baseAddress!,
+        ptr.count)
+      _writerSize = _writerSize &+ ptr.count
+    }
+  }
+
+  /// Adds an array of type Scalar to the buffer memory
+  /// - Parameter elements: An array of Scalars
+  @inline(__always)
+  @usableFromInline
+  mutating func push<T: NativeStruct>(elements: [T]) {
+    elements.withUnsafeBytes { ptr in
+      ensureSpace(size: ptr.count)
+      memcpy(
+        _storage.memory.advanced(by: writerIndex &- ptr.count),
+        ptr.baseAddress!,
+        ptr.count)
+      _writerSize = _writerSize &+ ptr.count
+    }
+  }
+
+  /// Adds a `ContiguousBytes` to buffer memory
+  /// - Parameter value: bytes to copy
+  #if swift(>=5.0) && !os(WASI)
+  @inline(__always)
+  @usableFromInline
+  mutating func push(bytes: ContiguousBytes) {
+    bytes.withUnsafeBytes { ptr in
+      ensureSpace(size: ptr.count)
+      memcpy(
+        _storage.memory.advanced(by: writerIndex &- ptr.count),
+        ptr.baseAddress!,
+        ptr.count)
+      _writerSize = _writerSize &+ ptr.count
+    }
+  }
+  #endif
+
+  /// Adds an object of type NativeStruct into the buffer
+  /// - Parameters:
+  ///   - value: Object  that will be written to the buffer
+  ///   - size: size to subtract from the WriterIndex
+  @usableFromInline
+  @inline(__always)
+  mutating func push<T: NativeStruct>(struct value: T, size: Int) {
+    ensureSpace(size: size)
+    withUnsafePointer(to: value) {
+      memcpy(
+        _storage.memory.advanced(by: writerIndex &- size),
+        $0,
+        size)
+      _writerSize = _writerSize &+ size
+    }
+  }
+
+  /// Adds an object of type Scalar into the buffer
+  /// - Parameters:
+  ///   - value: Object  that will be written to the buffer
+  ///   - len: Offset to subtract from the WriterIndex
+  @inline(__always)
+  @usableFromInline
+  mutating func push<T: Scalar>(value: T, len: Int) {
+    ensureSpace(size: len)
+    withUnsafePointer(to: value) {
+      memcpy(
+        _storage.memory.advanced(by: writerIndex &- len),
+        $0,
+        len)
+      _writerSize = _writerSize &+ len
+    }
+  }
+
+  /// Adds a string to the buffer using swift.utf8 object
+  /// - Parameter str: String that will be added to the buffer
+  /// - Parameter len: length of the string
+  @inline(__always)
+  @usableFromInline
+  mutating func push(string str: String, len: Int) {
+    ensureSpace(size: len)
+    if str.utf8
+      .withContiguousStorageIfAvailable({ self.push(bytes: $0, len: len) }) !=
+      nil
+    {
+    } else {
+      let utf8View = str.utf8
+      for c in utf8View.reversed() {
+        push(value: c, len: 1)
+      }
+    }
+  }
+
+  /// Writes a string to Bytebuffer using UTF8View
+  /// - Parameters:
+  ///   - bytes: Pointer to the view
+  ///   - len: Size of string
+  @usableFromInline
+  @inline(__always)
+  mutating func push(
+    bytes: UnsafeBufferPointer<String.UTF8View.Element>,
+    len: Int) -> Bool
+  {
+    memcpy(
+      _storage.memory.advanced(by: writerIndex &- len),
+      bytes.baseAddress!,
+      len)
+    _writerSize = _writerSize &+ len
+    return true
   }
 
   /// Write stores an object into the buffer directly or indirectly.
@@ -299,18 +372,55 @@ public struct ByteBuffer {
   func write<T>(value: T, index: Int, direct: Bool = false) {
     var index = index
     if !direct {
-      index = capacity &- index
+      index = _storage.capacity &- index
     }
-    assert(index < capacity, "Write index is out of writing bound")
+    assert(index < _storage.capacity, "Write index is out of writing bound")
     assert(index >= 0, "Writer index should be above zero")
-    _ = withUnsafePointer(to: value) { ptr in
-      _storage.withUnsafeRawPointer {
-        memcpy(
-          $0.advanced(by: index),
-          ptr,
-          MemoryLayout<T>.size)
-      }
+    withUnsafePointer(to: value) {
+      memcpy(
+        _storage.memory.advanced(by: index),
+        $0,
+        MemoryLayout<T>.size)
     }
+  }
+
+  /// Makes sure that buffer has enouch space for each of the objects that will be written into it
+  /// - Parameter size: size of object
+  @discardableResult
+  @usableFromInline
+  @inline(__always)
+  mutating func ensureSpace(size: Int) -> Int {
+    if size &+ _writerSize > _storage.capacity {
+      _storage.reallocate(size, writerSize: _writerSize, alignment: alignment)
+    }
+    assert(size < FlatBufferMaxSize, "Buffer can't grow beyond 2 Gigabytes")
+    return size
+  }
+
+  /// pops the written VTable if it's already written into the buffer
+  /// - Parameter size: size of the `VTable`
+  @usableFromInline
+  @inline(__always)
+  mutating func pop(_ size: Int) {
+    assert(
+      (_writerSize &- size) > 0,
+      "New size should NOT be a negative number")
+    memset(_storage.memory.advanced(by: writerIndex), 0, _writerSize &- size)
+    _writerSize = size
+  }
+
+  /// Clears the current size of the buffer
+  @inline(__always)
+  mutating public func clearSize() {
+    _writerSize = 0
+  }
+
+  /// Clears the current instance of the buffer, replacing it with new memory
+  @inline(__always)
+  mutating public func clear() {
+    _writerSize = 0
+    alignment = 1
+    _storage.initialize(for: _storage.capacity)
   }
 
   /// Reads an object from the buffer
@@ -319,10 +429,10 @@ public struct ByteBuffer {
   ///   - position: the index of the object in the buffer
   @inline(__always)
   public func read<T>(def: T.Type, position: Int) -> T {
-    _storage.readWithUnsafeRawPointer(position: position) {
-      $0.bindMemory(to: T.self, capacity: 1)
-        .pointee
+    if allowReadingUnalignedBuffers {
+      return _storage.memory.advanced(by: position).loadUnaligned(as: T.self)
     }
+    return _storage.memory.advanced(by: position).load(as: T.self)
   }
 
   /// Reads a slice from the memory assuming a type of T
@@ -332,80 +442,55 @@ public struct ByteBuffer {
   @inline(__always)
   public func readSlice<T>(
     index: Int,
-    count: Int
-  ) -> [T] {
+    count: Int) -> [T]
+  {
     assert(
-      index + count <= capacity,
+      index + count <= _storage.capacity,
       "Reading out of bounds is illegal")
-
-    return _storage.readWithUnsafeRawPointer(position: index) {
-      let buf = UnsafeBufferPointer(
-        start: $0.bindMemory(to: T.self, capacity: count),
-        count: count)
-      return Array(buf)
-    }
-  }
-
-  /// Provides a pointer towards the underlying primitive types
-  /// - Parameters:
-  ///   - index: index of the object to be read from the buffer
-  ///   - count: count of bytes in memory
-  @discardableResult
-  @inline(__always)
-  public func withUnsafePointerToSlice<T>(
-    index: Int,
-    count: Int,
-    body: (UnsafeRawBufferPointer) throws -> T
-  ) rethrows -> T {
-    assert(
-      index + count <= capacity,
-      "Reading out of bounds is illegal")
-    return try _storage.readWithUnsafeRawPointer(position: index) {
-      try body(UnsafeRawBufferPointer(start: $0, count: count))
-    }
+    let start = _storage.memory.advanced(by: index)
+      .assumingMemoryBound(to: T.self)
+    let array = UnsafeBufferPointer(start: start, count: count)
+    return Array(array)
   }
 
   #if !os(WASI)
-    /// Reads a string from the buffer and encodes it to a swift string
-    /// - Parameters:
-    ///   - index: index of the string in the buffer
-    ///   - count: length of the string
-    ///   - type: Encoding of the string
-    @inline(__always)
-    public func readString(
-      at index: Int,
-      count: Int,
-      type: String.Encoding = .utf8
-    ) -> String? {
-      assert(
-        index + count <= capacity,
-        "Reading out of bounds is illegal")
-      return _storage.readWithUnsafeRawPointer(position: index) {
-        let buf = UnsafeBufferPointer(
-          start: $0.bindMemory(to: UInt8.self, capacity: count),
-          count: count)
-        return String(
-          bytes: buf,
-          encoding: type)
-      }
-    }
+  /// Reads a string from the buffer and encodes it to a swift string
+  /// - Parameters:
+  ///   - index: index of the string in the buffer
+  ///   - count: length of the string
+  ///   - type: Encoding of the string
+  @inline(__always)
+  public func readString(
+    at index: Int,
+    count: Int,
+    type: String.Encoding = .utf8) -> String?
+  {
+    assert(
+      index + count <= _storage.capacity,
+      "Reading out of bounds is illegal")
+    let start = _storage.memory.advanced(by: index)
+      .assumingMemoryBound(to: UInt8.self)
+    let bufprt = UnsafeBufferPointer(start: start, count: count)
+    return String(bytes: Array(bufprt), encoding: type)
+  }
   #else
-    /// Reads a string from the buffer and encodes it to a swift string
-    /// - Parameters:
-    ///   - index: index of the string in the buffer
-    ///   - count: length of the string
-    @inline(__always)
-    public func readString(
-      at index: Int,
-      count: Int
-    ) -> String? {
-      assert(
-        index + count <= capacity,
-        "Reading out of bounds is illegal")
-      return _storage.readWithUnsafeRawPointer(position: index) {
-        String(cString: $0.bindMemory(to: UInt8.self, capacity: count))
-      }
-    }
+  /// Reads a string from the buffer and encodes it to a swift string
+  /// - Parameters:
+  ///   - index: index of the string in the buffer
+  ///   - count: length of the string
+  @inline(__always)
+  public func readString(
+    at index: Int,
+    count: Int) -> String?
+  {
+    assert(
+      index + count <= _storage.capacity,
+      "Reading out of bounds is illegal")
+    let start = _storage.memory.advanced(by: index)
+      .assumingMemoryBound(to: UInt8.self)
+    let bufprt = UnsafeBufferPointer(start: start, count: count)
+    return String(cString: bufprt.baseAddress!)
+  }
   #endif
 
   /// Creates a new Flatbuffer object that's duplicated from the current one
@@ -414,12 +499,22 @@ public struct ByteBuffer {
   public func duplicate(removing removeBytes: Int = 0) -> ByteBuffer {
     assert(removeBytes > 0, "Can NOT remove negative bytes")
     assert(
-      removeBytes < capacity,
+      removeBytes < _storage.capacity,
       "Can NOT remove more bytes than the ones allocated")
     return ByteBuffer(
-      blob: _storage.retainedBlob,
-      count: capacity,
-      removing: _readerIndex &- removeBytes)
+      memory: _storage.memory,
+      count: _storage.capacity,
+      removing: _writerSize &- removeBytes)
+  }
+
+  /// Returns the written bytes into the ``ByteBuffer``
+  public var underlyingBytes: [UInt8] {
+    let cp = capacity &- writerIndex
+    let start = memory.advanced(by: writerIndex)
+      .bindMemory(to: UInt8.self, capacity: cp)
+
+    let ptr = UnsafeBufferPointer<UInt8>(start: start, count: cp)
+    return Array(ptr)
   }
 
   /// SkipPrefix Skips the first 4 bytes in case one of the following
@@ -429,46 +524,19 @@ public struct ByteBuffer {
   @usableFromInline
   @inline(__always)
   mutating func skipPrefix() -> Int32 {
-    _readerIndex = _readerIndex &- MemoryLayout<Int32>.size
+    _writerSize = _writerSize &- MemoryLayout<Int32>.size
     return read(def: Int32.self, position: 0)
   }
 
-  @discardableResult
-  @inline(__always)
-  public func withUnsafeBytes<T>(
-    body: (UnsafeRawBufferPointer) throws
-      -> T
-  ) rethrows -> T {
-    try _storage.withUnsafeBytes(body)
-  }
-
-  @discardableResult
-  @inline(__always)
-  func withUnsafeMutableRawPointer<T>(
-    body: (UnsafeMutableRawPointer) throws
-      -> T
-  ) rethrows -> T {
-    try _storage.withUnsafeRawPointer(body)
-  }
-
-  @discardableResult
-  @inline(__always)
-  func readWithUnsafeRawPointer<T>(
-    position: Int,
-    _ body: (UnsafeRawPointer) throws -> T
-  ) rethrows -> T {
-    try _storage.readWithUnsafeRawPointer(position: position, body)
-  }
 }
 
 extension ByteBuffer: CustomDebugStringConvertible {
 
   public var debugDescription: String {
     """
-    buffer located at: \(_storage.retainedBlob), 
-    with capacity of \(capacity),
-    { writtenSize: \(_readerIndex), readerSize: \(reader), 
-    size: \(size) }
+    buffer located at: \(_storage.memory), with capacity of \(_storage.capacity)
+    { writerSize: \(_writerSize), readerSize: \(reader), writerIndex: \(
+      writerIndex) }
     """
   }
 }

@@ -264,22 +264,6 @@ namespace Google.FlatBuffers
         }
 #endif
 
-        public T[] ToArrayPadded<T>(int pos, int len, int padLeft, int padRight)
-            where T : struct
-        {
-            AssertOffsetAndLength(pos, len);
-            int totalBytes = padLeft + len + padRight;
-            byte[] raw = _buffer.Buffer;
-            T[] arr = new T[totalBytes];
-            Buffer.BlockCopy(raw, pos, arr, padLeft, len);
-            return arr;
-        }
-
-        public byte[] ToSizedArrayPadded(int padLeft, int padRight)
-        {
-            return ToArrayPadded<byte>(Position, Length - Position, padLeft, padRight);
-        }
-
         public byte[] ToSizedArray()
         {
             return ToArray<byte>(Position, Length - Position);
@@ -291,11 +275,6 @@ namespace Google.FlatBuffers
         }
 
 #if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
-        public ReadOnlySpan<byte> ToSizedReadOnlySpan()
-        {
-            return _buffer.ReadOnlySpan.Slice(Position, Length - Position);
-        }
-
         public ReadOnlyMemory<byte> ToReadOnlyMemory(int pos, int len)
         {
             return _buffer.ReadOnlyMemory.Slice(pos, len);
@@ -309,11 +288,6 @@ namespace Google.FlatBuffers
         public Span<byte> ToSpan(int pos, int len)
         {
             return _buffer.Span.Slice(pos, len);
-        }
-
-        public ReadOnlySpan<byte> ToReadOnlySpan(int pos, int len)
-        {
-            return _buffer.ReadOnlySpan.Slice(pos, len);
         }
 #else
         public ArraySegment<byte> ToArraySegment(int pos, int len)
@@ -406,19 +380,18 @@ namespace Google.FlatBuffers
 #elif ENABLE_SPAN_T
         protected void WriteLittleEndian(int offset, int count, ulong data)
         {
-            Span<byte> span = _buffer.Span.Slice(offset, count);
             if (BitConverter.IsLittleEndian)
             {
                 for (int i = 0; i < count; i++)
                 {
-                    span[i] = (byte)(data >> i * 8);
+                    _buffer.Span[offset + i] = (byte)(data >> i * 8);
                 }
             }
             else
             {
                 for (int i = 0; i < count; i++)
                 {
-                    span[count - 1 - i] = (byte)(data >> i * 8);
+                    _buffer.Span[offset + count - 1 - i] = (byte)(data >> i * 8);
                 }
             }
         }
@@ -426,20 +399,19 @@ namespace Google.FlatBuffers
         protected ulong ReadLittleEndian(int offset, int count)
         {
             AssertOffsetAndLength(offset, count);
-            ReadOnlySpan<byte> span = _buffer.ReadOnlySpan.Slice(offset, count);
             ulong r = 0;
             if (BitConverter.IsLittleEndian)
             {
                 for (int i = 0; i < count; i++)
                 {
-                    r |= (ulong)span[i] << i * 8;
+                    r |= (ulong)_buffer.Span[offset + i] << i * 8;
                 }
             }
             else
             {
                 for (int i = 0; i < count; i++)
                 {
-                    r |= (ulong)span[count - 1 - i] << i * 8;
+                    r |= (ulong)_buffer.Span[offset + count - 1 - i] << i * 8;
                 }
             }
             return r;
@@ -473,7 +445,8 @@ namespace Google.FlatBuffers
         {
             AssertOffsetAndLength(offset, sizeof(byte) * count);
             Span<byte> span = _buffer.Span.Slice(offset, count);
-            span.Fill(value);
+            for (var i = 0; i < span.Length; ++i)
+                span[i] = value;
         }
 #else
         public void PutSbyte(int offset, sbyte value)
@@ -720,7 +693,6 @@ namespace Google.FlatBuffers
 #if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
         public unsafe string GetStringUTF8(int startPos, int len)
         {
-            AssertOffsetAndLength(startPos, len);
             fixed (byte* buffer = &MemoryMarshal.GetReference(_buffer.ReadOnlySpan.Slice(startPos)))
             {
                 return Encoding.UTF8.GetString(buffer, len);

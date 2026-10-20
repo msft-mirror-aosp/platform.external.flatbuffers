@@ -24,7 +24,7 @@ mutate_books_read(value:number):boolean {
   return true;
 }
 
-static getFullyQualifiedName(): "BookReader" {
+static getFullyQualifiedName():string {
   return 'BookReader';
 }
 

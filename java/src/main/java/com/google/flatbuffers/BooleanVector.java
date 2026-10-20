@@ -17,10 +17,13 @@
 package com.google.flatbuffers;
 
 import static com.google.flatbuffers.Constants.*;
-
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 
-/** Helper type for accessing vector of booleans. */
+/**
+ * Helper type for accessing vector of booleans.
+ */
 public final class BooleanVector extends BaseVector {
   /**
    * Assigns vector access object to vector data.
@@ -28,11 +31,10 @@ public final class BooleanVector extends BaseVector {
    * @param _vector Start data of a vector.
    * @param _bb Table's ByteBuffer.
    * @return Returns current vector access object assigned to vector data whose offset is stored at
-   *     `vector`.
+   *         `vector`.
    */
   public BooleanVector __assign(int _vector, ByteBuffer _bb) {
-    __reset(_vector, Constants.SIZEOF_BYTE, _bb);
-    return this;
+    __reset(_vector, Constants.SIZEOF_BYTE, _bb); return this;
   }
 
   /**
@@ -41,7 +43,7 @@ public final class BooleanVector extends BaseVector {
    * @param j The index from which the boolean will be read.
    * @return the boolean value at the given index.
    */
-  public boolean get(int j) {
+  public boolean get(int j) { 
     return 0 != bb.get(__element(j));
   }
 }

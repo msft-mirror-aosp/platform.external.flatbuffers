@@ -31,7 +31,11 @@ impl<'a, T: 'a> Default for Vector<'a, T> {
     fn default() -> Self {
         // Static, length 0 vector.
         // Note that derived default causes UB due to issues in read_scalar_at /facepalm.
-        Self(&[0; core::mem::size_of::<UOffsetT>()], 0, Default::default())
+        Self(
+            &[0; core::mem::size_of::<UOffsetT>()],
+            0,
+            Default::default(),
+        )
     }
 }
 
@@ -119,11 +123,11 @@ impl<'a, T: Follow<'a> + 'a> Vector<'a, T> {
                 Ordering::Equal => return Some(value),
                 Ordering::Less => left = mid + 1,
                 Ordering::Greater => {
-                    if mid == 0 {
-                        return None;
-                    }
-                    right = mid - 1;
-                }
+                  if mid == 0 {
+                    return None;
+                  }
+                  right = mid - 1;
+                },
             }
         }
 
@@ -205,7 +209,12 @@ impl<'a, T: 'a> VectorIter<'a, T> {
     ///
     #[inline]
     pub unsafe fn from_slice(buf: &'a [u8], items_num: usize) -> Self {
-        VectorIter { buf, loc: 0, remaining: items_num, phantom: PhantomData }
+        VectorIter {
+            buf,
+            loc: 0,
+            remaining: items_num,
+            phantom: PhantomData,
+        }
     }
 }
 

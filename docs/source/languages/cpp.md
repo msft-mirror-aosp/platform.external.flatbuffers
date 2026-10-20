@@ -419,8 +419,7 @@ Each root type will have a verification function generated for it,
 e.g. for `Monster`, you can call:
 
 ```cpp
-	Verifier verifier(buf, len);
-	bool ok = VerifyMonsterBuffer(verifier);
+	bool ok = VerifyMonsterBuffer(Verifier(buf, len));
 ```
 
 if `ok` is true, the buffer is safe to read.

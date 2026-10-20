@@ -2,22 +2,21 @@
 
 package MyGame.OtherNameSpace;
 
-import com.google.flatbuffers.*;
 import java.nio.*;
+import java.lang.*;
 import java.util.*;
+import com.google.flatbuffers.*;
 
 public class UnusedT {
   private int a;
 
-  public int getA() {
-    return a;
-  }
+  public int getA() { return a; }
 
-  public void setA(int a) {
-    this.a = a;
-  }
+  public void setA(int a) { this.a = a; }
+
 
   public UnusedT() {
     this.a = 0;
   }
 }
+

@@ -18,9 +18,6 @@ package com.google.flatbuffers.kotlin.benchmark
 import com.google.flatbuffers.kotlin.ArrayReadWriteBuffer
 import com.google.flatbuffers.kotlin.Key
 import com.google.flatbuffers.kotlin.Utf8
-import java.nio.ByteBuffer
-import java.util.concurrent.TimeUnit
-import kotlin.random.Random
 import kotlinx.benchmark.Blackhole
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -30,6 +27,9 @@ import org.openjdk.jmh.annotations.OutputTimeUnit
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
+import java.nio.ByteBuffer
+import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -44,7 +44,9 @@ open class UTF8Benchmark {
   private var sampleSmallAscii = (0..sampleSize).map { populateAscii(stringSize) }.toList()
   private var sampleSmallAsciiDecoded = sampleSmallAscii.map { it.encodeToByteArray() }.toList()
 
-  @Setup fun setUp() {}
+  @Setup
+  fun setUp() {
+  }
 
   @Benchmark
   fun encodeUtf8KotlinStandard(blackhole: Blackhole) {
@@ -52,7 +54,6 @@ open class UTF8Benchmark {
       blackhole.consume(i.encodeToByteArray())
     }
   }
-
   @Benchmark
   fun encodeUtf8KotlinFlatbuffers(blackhole: Blackhole) {
     for (i in sampleSmallUtf8) {
@@ -60,7 +61,6 @@ open class UTF8Benchmark {
       blackhole.consume(Utf8.encodeUtf8Array(i, byteArray, 0, byteArray.size))
     }
   }
-
   @Benchmark
   fun encodeUtf8JavaFlatbuffers(blackhole: Blackhole) {
     val javaUtf8 = com.google.flatbuffers.Utf8.getDefault()
@@ -101,7 +101,6 @@ open class UTF8Benchmark {
       blackhole.consume(i.encodeToByteArray())
     }
   }
-
   @Benchmark
   fun encodeAsciiKotlinFlatbuffers(blackhole: Blackhole) {
     for (i in sampleSmallAscii) {
@@ -109,7 +108,6 @@ open class UTF8Benchmark {
       blackhole.consume(Utf8.encodeUtf8Array(i, byteArray, 0, byteArray.size))
     }
   }
-
   @Benchmark
   fun encodeAsciiJavaFlatbuffers(blackhole: Blackhole) {
     val javaUtf8 = com.google.flatbuffers.Utf8.getDefault()
@@ -181,8 +179,7 @@ open class UTF8Benchmark {
     while (i < size) {
       val w = Random.nextInt() and 0xFF
       when {
-        w < 0x80 -> data[i++] = 0x20
-        // w;
+        w < 0x80 -> data[i++] = 0x20; // w;
         w < 0xE0 -> {
           data[i++] = (0xC2 + Random.nextInt() % (0xDF - 0xC2 + 1)).toByte()
           data[i++] = (0x80 + Random.nextInt() % (0xBF - 0x80 + 1)).toByte()

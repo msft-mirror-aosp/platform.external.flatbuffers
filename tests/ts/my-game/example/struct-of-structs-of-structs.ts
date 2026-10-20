@@ -20,7 +20,7 @@ a(obj?:StructOfStructs):StructOfStructs|null {
   return (obj || new StructOfStructs()).__init(this.bb_pos, this.bb!);
 }
 
-static getFullyQualifiedName(): "MyGame.Example.StructOfStructsOfStructs" {
+static getFullyQualifiedName():string {
   return 'MyGame.Example.StructOfStructsOfStructs';
 }
 

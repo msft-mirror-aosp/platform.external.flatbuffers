@@ -54,11 +54,8 @@ def End(builder: flatbuffers.Builder) -> int:
 class TestSimpleTableWithEnumT(object):
 
     # TestSimpleTableWithEnumT
-    def __init__(
-        self,
-        color = 2,
-    ):
-        self.color = color  # type: int
+    def __init__(self):
+        self.color = 2  # type: int
 
     @classmethod
     def InitFromBuf(cls, buf, pos):

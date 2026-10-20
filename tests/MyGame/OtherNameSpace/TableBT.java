@@ -2,22 +2,21 @@
 
 package MyGame.OtherNameSpace;
 
-import com.google.flatbuffers.*;
 import java.nio.*;
+import java.lang.*;
 import java.util.*;
+import com.google.flatbuffers.*;
 
 public class TableBT {
   private TableAT a;
 
-  public TableAT getA() {
-    return a;
-  }
+  public TableAT getA() { return a; }
 
-  public void setA(TableAT a) {
-    this.a = a;
-  }
+  public void setA(TableAT a) { this.a = a; }
+
 
   public TableBT() {
     this.a = null;
   }
 }
+

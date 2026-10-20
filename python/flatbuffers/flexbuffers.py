@@ -36,7 +36,6 @@ class BitWidth(enum.IntEnum):
   These are used in the lower 2 bits of a type field to determine the size of
   the elements (and or size field) of the item pointed to (e.g. vector).
   """
-
   W8 = 0  # 2^0 = 1 byte
   W16 = 1  # 2^1 = 2 bytes
   W32 = 2  # 2^2 = 4 bytes
@@ -82,9 +81,12 @@ class BitWidth(enum.IntEnum):
 
   @staticmethod
   def B(byte_width):
-    return {1: BitWidth.W8, 2: BitWidth.W16, 4: BitWidth.W32, 8: BitWidth.W64}[
-        byte_width
-    ]
+    return {
+        1: BitWidth.W8,
+        2: BitWidth.W16,
+        4: BitWidth.W32,
+        8: BitWidth.W64
+    }[byte_width]
 
 
 I = {1: 'b', 2: 'h', 4: 'i', 8: 'q'}  # Integer formats
@@ -163,7 +165,6 @@ class Type(enum.IntEnum):
   These are used as the upper 6 bits of a type field to indicate the actual
   type.
   """
-
   NULL = 0
   INT = 1
   UINT = 2
@@ -213,10 +214,8 @@ class Type(enum.IntEnum):
 
   @staticmethod
   def IsTypedVector(type_):
-    return (
-        Type.VECTOR_INT <= type_ <= Type.VECTOR_STRING_DEPRECATED
-        or type_ == Type.VECTOR_BOOL
-    )
+    return Type.VECTOR_INT <= type_ <= Type.VECTOR_STRING_DEPRECATED or \
+           type_ == Type.VECTOR_BOOL
 
   @staticmethod
   def IsTypedVectorElementType(type_):
@@ -307,7 +306,7 @@ class Buf:
 
   def Find(self, sub):
     """Returns the lowest index where the sub subsequence is found."""
-    return self._buf[self._offset :].find(sub)
+    return self._buf[self._offset:].find(sub)
 
   def Slice(self, offset):
     """Returns new `Buf` which starts from the given offset."""
@@ -315,12 +314,11 @@ class Buf:
 
   def Indirect(self, offset, byte_width):
     """Return new `Buf` based on the encoded offset (indirect encoding)."""
-    return self.Slice(offset - _Unpack(U, self[offset : offset + byte_width]))
+    return self.Slice(offset - _Unpack(U, self[offset:offset + byte_width]))
 
 
 class Object:
   """Base class for all non-trivial data accessors."""
-
   __slots__ = '_buf', '_byte_width'
 
   def __init__(self, buf, byte_width):
@@ -334,8 +332,7 @@ class Object:
 
 class Sized(Object):
   """Base class for all data accessors which need to read encoded size."""
-
-  __slots__ = ('_size',)
+  __slots__ = '_size',
 
   def __init__(self, buf, byte_width, size=0):
     super().__init__(buf, byte_width)
@@ -346,7 +343,7 @@ class Sized(Object):
 
   @property
   def SizeBytes(self):
-    return self._buf[-self._byte_width : 0]
+    return self._buf[-self._byte_width:0]
 
   def __len__(self):
     return self._size
@@ -354,12 +351,11 @@ class Sized(Object):
 
 class Blob(Sized):
   """Data accessor for the encoded blob bytes."""
-
   __slots__ = ()
 
   @property
   def Bytes(self):
-    return self._buf[0 : len(self)]
+    return self._buf[0:len(self)]
 
   def __repr__(self):
     return 'Blob(%s, size=%d)' % (self._buf, len(self))
@@ -367,12 +363,11 @@ class Blob(Sized):
 
 class String(Sized):
   """Data accessor for the encoded string bytes."""
-
   __slots__ = ()
 
   @property
   def Bytes(self):
-    return self._buf[0 : len(self)]
+    return self._buf[0:len(self)]
 
   def Mutate(self, value):
     """Mutates underlying string bytes in place.
@@ -388,9 +383,9 @@ class String(Sized):
     encoded = value.encode('utf-8')
     n = len(encoded)
     if n <= len(self):
-      self._buf[-self._byte_width : 0] = _Pack(U, n, self._byte_width)
+      self._buf[-self._byte_width:0] = _Pack(U, n, self._byte_width)
       self._buf[0:n] = encoded
-      self._buf[n : len(self)] = bytearray(len(self) - n)
+      self._buf[n:len(self)] = bytearray(len(self) - n)
       return True
     return False
 
@@ -403,7 +398,6 @@ class String(Sized):
 
 class Key(Object):
   """Data accessor for the encoded key bytes."""
-
   __slots__ = ()
 
   def __init__(self, buf, byte_width):
@@ -412,7 +406,7 @@ class Key(Object):
 
   @property
   def Bytes(self):
-    return self._buf[0 : len(self)]
+    return self._buf[0:len(self)]
 
   def __len__(self):
     return self._buf.Find(0)
@@ -426,14 +420,12 @@ class Key(Object):
 
 class Vector(Sized):
   """Data accessor for the encoded vector bytes."""
-
   __slots__ = ()
 
   def __getitem__(self, index):
     if index < 0 or index >= len(self):
-      raise IndexError(
-          'vector index %s is out of [0, %d) range' % (index, len(self))
-      )
+      raise IndexError('vector index %s is out of [0, %d) range' % \
+          (index, len(self)))
 
     packed_type = self._buf[len(self) * self._byte_width + index]
     buf = self._buf.Slice(index * self._byte_width)
@@ -445,16 +437,12 @@ class Vector(Sized):
     return [e.Value for e in self]
 
   def __repr__(self):
-    return 'Vector(%s, byte_width=%d, size=%d)' % (
-        self._buf,
-        self._byte_width,
-        self._size,
-    )
+    return 'Vector(%s, byte_width=%d, size=%d)' % \
+        (self._buf, self._byte_width, self._size)
 
 
 class TypedVector(Sized):
   """Data accessor for the encoded typed vector or fixed typed vector bytes."""
-
   __slots__ = '_element_type', '_size'
 
   def __init__(self, buf, byte_width, element_type, size=0):
@@ -473,7 +461,7 @@ class TypedVector(Sized):
 
   @property
   def Bytes(self):
-    return self._buf[: self._byte_width * len(self)]
+    return self._buf[:self._byte_width * len(self)]
 
   @property
   def ElementType(self):
@@ -481,9 +469,8 @@ class TypedVector(Sized):
 
   def __getitem__(self, index):
     if index < 0 or index >= len(self):
-      raise IndexError(
-          'vector index %s is out of [0, %d) range' % (index, len(self))
-      )
+      raise IndexError('vector index %s is out of [0, %d) range' % \
+          (index, len(self)))
 
     buf = self._buf.Slice(index * self._byte_width)
     return Ref(buf, self._byte_width, 1, self._element_type)
@@ -510,12 +497,8 @@ class TypedVector(Sized):
       raise TypeError('unsupported element_type: %s' % self._element_type)
 
   def __repr__(self):
-    return 'TypedVector(%s, byte_width=%d, element_type=%s, size=%d)' % (
-        self._buf,
-        self._byte_width,
-        self._element_type,
-        self._size,
-    )
+    return 'TypedVector(%s, byte_width=%d, element_type=%s, size=%d)' % \
+        (self._buf, self._byte_width, self._element_type, self._size)
 
 
 class Map(Vector):
@@ -541,9 +524,7 @@ class Map(Vector):
 
   @property
   def Keys(self):
-    byte_width = _Unpack(
-        U, self._buf[-2 * self._byte_width : -self._byte_width]
-    )
+    byte_width = _Unpack(U, self._buf[-2 * self._byte_width:-self._byte_width])
     buf = self._buf.Indirect(-3 * self._byte_width, self._byte_width)
     return TypedVector(buf, byte_width, Type.KEY)
 
@@ -561,7 +542,6 @@ class Map(Vector):
 
 class Ref:
   """Data accessor for the encoded data bytes."""
-
   __slots__ = '_buf', '_parent_width', '_byte_width', '_type'
 
   @staticmethod
@@ -576,16 +556,12 @@ class Ref:
     self._type = type_
 
   def __repr__(self):
-    return 'Ref(%s, parent_width=%d, byte_width=%d, type_=%s)' % (
-        self._buf,
-        self._parent_width,
-        self._byte_width,
-        self._type,
-    )
+    return 'Ref(%s, parent_width=%d, byte_width=%d, type_=%s)' % \
+            (self._buf, self._parent_width, self._byte_width, self._type)
 
   @property
   def _Bytes(self):
-    return self._buf[: self._parent_width]
+    return self._buf[:self._parent_width]
 
   def _ConvertError(self, target_type):
     raise TypeError('cannot convert %s to %s' % (self._type, target_type))
@@ -617,9 +593,8 @@ class Ref:
     Returns:
       Whether the value was mutated or not.
     """
-    return self.IsBool and _Mutate(
-        U, self._buf, value, self._parent_width, BitWidth.W8
-    )
+    return self.IsBool and \
+           _Mutate(U, self._buf, value, self._parent_width, BitWidth.W8)
 
   @property
   def IsNumeric(self):
@@ -627,12 +602,8 @@ class Ref:
 
   @property
   def IsInt(self):
-    return self._type in (
-        Type.INT,
-        Type.INDIRECT_INT,
-        Type.UINT,
-        Type.INDIRECT_UINT,
-    )
+    return self._type in (Type.INT, Type.INDIRECT_INT, Type.UINT,
+                          Type.INDIRECT_UINT)
 
   @property
   def AsInt(self):
@@ -644,11 +615,11 @@ class Ref:
     elif self._type is Type.INT:
       return _Unpack(I, self._Bytes)
     elif self._type is Type.INDIRECT_INT:
-      return _Unpack(I, self._Indirect()[: self._byte_width])
+      return _Unpack(I, self._Indirect()[:self._byte_width])
     if self._type is Type.UINT:
       return _Unpack(U, self._Bytes)
     elif self._type is Type.INDIRECT_UINT:
-      return _Unpack(U, self._Indirect()[: self._byte_width])
+      return _Unpack(U, self._Indirect()[:self._byte_width])
     elif self.IsString:
       return len(self.AsString)
     elif self.IsKey:
@@ -677,15 +648,13 @@ class Ref:
     if self._type is Type.INT:
       return _Mutate(I, self._buf, value, self._parent_width, BitWidth.I(value))
     elif self._type is Type.INDIRECT_INT:
-      return _Mutate(
-          I, self._Indirect(), value, self._byte_width, BitWidth.I(value)
-      )
+      return _Mutate(I, self._Indirect(), value, self._byte_width,
+                     BitWidth.I(value))
     elif self._type is Type.UINT:
       return _Mutate(U, self._buf, value, self._parent_width, BitWidth.U(value))
     elif self._type is Type.INDIRECT_UINT:
-      return _Mutate(
-          U, self._Indirect(), value, self._byte_width, BitWidth.U(value)
-      )
+      return _Mutate(U, self._Indirect(), value, self._byte_width,
+                     BitWidth.U(value))
     else:
       return False
 
@@ -705,7 +674,7 @@ class Ref:
     elif self._type is Type.FLOAT:
       return _Unpack(F, self._Bytes)
     elif self._type is Type.INDIRECT_FLOAT:
-      return _Unpack(F, self._Indirect()[: self._byte_width])
+      return _Unpack(F, self._Indirect()[:self._byte_width])
     elif self.IsString:
       return float(self.AsString)
     elif self.IsVector:
@@ -728,21 +697,11 @@ class Ref:
       Whether the value was mutated or not.
     """
     if self._type is Type.FLOAT:
-      return _Mutate(
-          F,
-          self._buf,
-          value,
-          self._parent_width,
-          BitWidth.B(self._parent_width),
-      )
+      return _Mutate(F, self._buf, value, self._parent_width,
+                     BitWidth.B(self._parent_width))
     elif self._type is Type.INDIRECT_FLOAT:
-      return _Mutate(
-          F,
-          self._Indirect(),
-          value,
-          self._byte_width,
-          BitWidth.B(self._byte_width),
-      )
+      return _Mutate(F, self._Indirect(), value, self._byte_width,
+                     BitWidth.B(self._byte_width))
     else:
       return False
 
@@ -822,11 +781,8 @@ class Ref:
   @property
   def AsTypedVector(self):
     if self.IsTypedVector:
-      return TypedVector(
-          self._Indirect(),
-          self._byte_width,
-          Type.ToTypedVectorElementType(self._type),
-      )
+      return TypedVector(self._Indirect(), self._byte_width,
+                         Type.ToTypedVectorElementType(self._type))
     else:
       raise self._ConvertError('TYPED_VECTOR')
 
@@ -955,11 +911,8 @@ class Value:
     if Type.IsInline(self._type):
       return self._min_bit_width
     for byte_width in 1, 2, 4, 8:
-      offset_loc = (
-          buf_size
-          + _PaddingBytes(buf_size, byte_width)
-          + elem_index * byte_width
-      )
+      offset_loc = buf_size + _PaddingBytes(buf_size, byte_width) + \
+                   elem_index * byte_width
       bit_width = BitWidth.U(offset_loc - self._value)
       if byte_width == (1 << bit_width):
         return bit_width
@@ -984,7 +937,6 @@ def InMap(func):
       func(self, *args[1:], **kwargs)
     else:
       func(self, *args, **kwargs)
-
   return wrapper
 
 
@@ -997,7 +949,6 @@ def InMapForString(func):
       func(self, args[1])
     else:
       raise ValueError('invalid number of arguments')
-
   return wrapper
 
 
@@ -1027,12 +978,10 @@ class Pool:
 class Builder:
   """Helper class to encode structural data into flexbuffers format."""
 
-  def __init__(
-      self,
-      share_strings=False,
-      share_keys=True,
-      force_min_bit_width=BitWidth.W8,
-  ):
+  def __init__(self,
+               share_strings=False,
+               share_keys=True,
+               force_min_bit_width=BitWidth.W8):
     self._share_strings = share_strings
     self._share_keys = share_keys
     self._force_min_bit_width = force_min_bit_width
@@ -1085,7 +1034,7 @@ class Builder:
 
   def _ReadKey(self, offset):
     key = self._buf[offset:]
-    return key[: key.find(0)]
+    return key[:key.find(0)]
 
   def _Align(self, alignment):
     byte_width = 1 << alignment
@@ -1105,11 +1054,7 @@ class Builder:
 
   def _WriteAny(self, value, byte_width):
     fmt = {
-        Type.NULL: U,
-        Type.BOOL: U,
-        Type.INT: I,
-        Type.UINT: U,
-        Type.FLOAT: F,
+        Type.NULL: U, Type.BOOL: U, Type.INT: I, Type.UINT: U, Type.FLOAT: F
     }.get(value.Type)
     if fmt:
       self._Write(fmt, value.Value, byte_width)
@@ -1212,9 +1157,11 @@ class Builder:
   def _PushIndirect(self, value, type_, bit_width):
     byte_width = self._Align(bit_width)
     loc = len(self._buf)
-    fmt = {Type.INDIRECT_INT: I, Type.INDIRECT_UINT: U, Type.INDIRECT_FLOAT: F}[
-        type_
-    ]
+    fmt = {
+        Type.INDIRECT_INT: I,
+        Type.INDIRECT_UINT: U,
+        Type.INDIRECT_FLOAT: F
+    }[type_]
     self._Write(fmt, value, byte_width)
     self._stack.append(Value(loc, type_, bit_width))
 
@@ -1415,12 +1362,10 @@ class Builder:
         self._WriteScalarVector(Type.FLOAT, 8, elements, fixed=False)
       elif elements.typecode in ('b', 'h', 'i', 'l', 'q'):
         self._WriteScalarVector(
-            Type.INT, elements.itemsize, elements, fixed=False
-        )
+            Type.INT, elements.itemsize, elements, fixed=False)
       elif elements.typecode in ('B', 'H', 'I', 'L', 'Q'):
         self._WriteScalarVector(
-            Type.UINT, elements.itemsize, elements, fixed=False
-        )
+            Type.UINT, elements.itemsize, elements, fixed=False)
       else:
         raise ValueError('unsupported array typecode: %s' % elements.typecode)
     else:
@@ -1430,9 +1375,10 @@ class Builder:
           add(e)
 
   @InMap
-  def FixedTypedVectorFromElements(
-      self, elements, element_type=None, byte_width=0
-  ):
+  def FixedTypedVectorFromElements(self,
+                                   elements,
+                                   element_type=None,
+                                   byte_width=0):
     """Encodes sequence of elements of the same type as fixed typed vector.
 
     Args:
@@ -1453,7 +1399,7 @@ class Builder:
     if len(types) != 1:
       raise TypeError('all elements must be of the same type')
 
-    (type_,) = types
+    type_, = types
 
     if element_type is None:
       element_type = {int: Type.INT, float: Type.FLOAT}.get(type_)
@@ -1464,7 +1410,7 @@ class Builder:
       width = {
           Type.UINT: BitWidth.U,
           Type.INT: BitWidth.I,
-          Type.FLOAT: BitWidth.F,
+          Type.FLOAT: BitWidth.F
       }[element_type]
       byte_width = 1 << max(width(e) for e in elements)
 
@@ -1495,8 +1441,7 @@ class Builder:
 
     keys = self._CreateVector(self._stack[start::2], typed=True, fixed=False)
     values = self._CreateVector(
-        self._stack[start + 1 :: 2], typed=False, fixed=False, keys=keys
-    )
+        self._stack[start + 1::2], typed=False, fixed=False, keys=keys)
 
     del self._stack[start:]
     self._stack.append(values)
@@ -1576,8 +1521,7 @@ def GetRoot(buf):
     raise ValueError('buffer is too small')
   byte_width = buf[-1]
   return Ref.PackedType(
-      Buf(buf, -(2 + byte_width)), byte_width, packed_type=buf[-2]
-  )
+      Buf(buf, -(2 + byte_width)), byte_width, packed_type=buf[-2])
 
 
 def Dumps(obj):

@@ -44,9 +44,7 @@ def End(builder):
 class MonsterT(object):
 
     # MonsterT
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         pass
 
     @classmethod

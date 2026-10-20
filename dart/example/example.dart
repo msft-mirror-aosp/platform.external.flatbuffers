@@ -15,7 +15,6 @@
  */
 
 import 'package:flat_buffers/flat_buffers.dart' as fb;
-
 import './monster_my_game.sample_generated.dart' as my_game;
 
 // Example how to use FlatBuffers to create and read binary buffers.
@@ -79,8 +78,7 @@ void builderTest() {
   builder.finish(monsteroff);
   if (verify(builder.buffer)) {
     print(
-      "The FlatBuffer was successfully created with a builder and verified!",
-    );
+        "The FlatBuffer was successfully created with a builder and verified!");
   }
 }
 
@@ -96,10 +94,7 @@ void objectBuilderTest() {
     name: 'Orc',
     inventory: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     color: my_game.Color.Red,
-    weapons: [
-      my_game.WeaponObjectBuilder(name: 'Sword', damage: 3),
-      axe,
-    ],
+    weapons: [my_game.WeaponObjectBuilder(name: 'Sword', damage: 3), axe],
     equippedType: my_game.EquipmentTypeId.Weapon,
     equipped: axe,
   );
@@ -113,8 +108,7 @@ void objectBuilderTest() {
   // Instead, we're going to access it right away (as if we just received it).
   if (verify(buffer)) {
     print(
-      "The FlatBuffer was successfully created with an object builder and verified!",
-    );
+        "The FlatBuffer was successfully created with an object builder and verified!");
   }
 }
 

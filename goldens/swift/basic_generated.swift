@@ -2,15 +2,11 @@
 // swiftlint:disable all
 // swiftformat:disable all
 
-#if canImport(Common)
-import Common
-#endif
-
 import FlatBuffers
 
 public struct flatbuffers_goldens_Galaxy: FlatBufferObject, Verifiable {
 
-  static func validateVersion() { FlatBuffersVersion_25_9_23() }
+  static func validateVersion() { FlatBuffersVersion_25_1_24() }
   public var __buffer: ByteBuffer! { return _accessor.bb }
   private var _accessor: Table
 
@@ -45,7 +41,7 @@ public struct flatbuffers_goldens_Galaxy: FlatBufferObject, Verifiable {
 
 public struct flatbuffers_goldens_Universe: FlatBufferObject, Verifiable {
 
-  static func validateVersion() { FlatBuffersVersion_25_9_23() }
+  static func validateVersion() { FlatBuffersVersion_25_1_24() }
   public var __buffer: ByteBuffer! { return _accessor.bb }
   private var _accessor: Table
 

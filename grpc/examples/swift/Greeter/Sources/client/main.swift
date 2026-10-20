@@ -37,8 +37,7 @@ func greet(name: String, client greeter: models_GreeterServiceClient) {
   builder.finish(offset: root)
 
   // Make the RPC call to the server.
-  let sayHello =
-    greeter
+  let sayHello = greeter
     .SayHello(Message<models_HelloRequest>(builder: &builder))
 
   // wait() on the response to stop the program from exiting before the response is received.
@@ -77,7 +76,7 @@ func main(args: [String]) {
     print("Usage: PORT [NAME]")
     exit(1)
 
-  case (.some(let port), let name):
+  case let (.some(port), name):
     // Setup an `EventLoopGroup` for the connection to run on.
     //
     // See: https://github.com/apple/swift-nio#eventloops-and-eventloopgroups

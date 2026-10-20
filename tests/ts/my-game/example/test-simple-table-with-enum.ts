@@ -41,7 +41,7 @@ mutate_color(value:Color):boolean {
   return true;
 }
 
-static getFullyQualifiedName(): "MyGame.Example.TestSimpleTableWithEnum" {
+static getFullyQualifiedName():string {
   return 'MyGame.Example.TestSimpleTableWithEnum';
 }
 

@@ -4,8 +4,8 @@
 library namespace_a.namespace_b;
 
 import 'dart:typed_data' show Uint8List;
-
 import 'package:flat_buffers/flat_buffers.dart' as fb;
+
 
 class UnionInNestedNSTypeId {
   final int value;
@@ -14,14 +14,12 @@ class UnionInNestedNSTypeId {
   factory UnionInNestedNSTypeId.fromValue(int value) {
     final result = values[value];
     if (result == null) {
-      throw StateError(
-        'Invalid value $value for bit flag enum UnionInNestedNSTypeId',
-      );
+      throw StateError('Invalid value $value for bit flag enum UnionInNestedNSTypeId');
     }
     return result;
   }
 
-  static UnionInNestedNSTypeId? _createOrNull(int? value) =>
+  static UnionInNestedNSTypeId? _createOrNull(int? value) => 
       value == null ? null : UnionInNestedNSTypeId.fromValue(value);
 
   static const int minValue = 0;
@@ -29,16 +27,12 @@ class UnionInNestedNSTypeId {
   static bool containsValue(int value) => values.containsKey(value);
 
   static const UnionInNestedNSTypeId NONE = UnionInNestedNSTypeId._(0);
-  static const UnionInNestedNSTypeId TableInNestedNS = UnionInNestedNSTypeId._(
-    1,
-  );
+  static const UnionInNestedNSTypeId TableInNestedNS = UnionInNestedNSTypeId._(1);
   static const Map<int, UnionInNestedNSTypeId> values = {
     0: NONE,
-    1: TableInNestedNS,
-  };
+    1: TableInNestedNS};
 
-  static const fb.Reader<UnionInNestedNSTypeId> reader =
-      _UnionInNestedNSTypeIdReader();
+  static const fb.Reader<UnionInNestedNSTypeId> reader = _UnionInNestedNSTypeIdReader();
 
   @override
   String toString() {
@@ -69,7 +63,7 @@ class EnumInNestedNS {
     return result;
   }
 
-  static EnumInNestedNS? _createOrNull(int? value) =>
+  static EnumInNestedNS? _createOrNull(int? value) => 
       value == null ? null : EnumInNestedNS.fromValue(value);
 
   static const int minValue = 0;
@@ -79,7 +73,10 @@ class EnumInNestedNS {
   static const EnumInNestedNS A = EnumInNestedNS._(0);
   static const EnumInNestedNS B = EnumInNestedNS._(1);
   static const EnumInNestedNS C = EnumInNestedNS._(2);
-  static const Map<int, EnumInNestedNS> values = {0: A, 1: B, 2: C};
+  static const Map<int, EnumInNestedNS> values = {
+    0: A,
+    1: B,
+    2: C};
 
   static const fb.Reader<EnumInNestedNS> reader = _EnumInNestedNSReader();
 
@@ -119,7 +116,8 @@ class TableInNestedNS {
     return 'TableInNestedNS{foo: $foo}';
   }
 
-  TableInNestedNST unpack() => TableInNestedNST(foo: foo);
+  TableInNestedNST unpack() => TableInNestedNST(
+      foo: foo);
 
   static int pack(fb.Builder fbBuilder, TableInNestedNST? object) {
     if (object == null) return 0;
@@ -130,7 +128,8 @@ class TableInNestedNS {
 class TableInNestedNST implements fb.Packable {
   int foo;
 
-  TableInNestedNST({this.foo = 0});
+  TableInNestedNST({
+      this.foo = 0});
 
   @override
   int pack(fb.Builder fbBuilder) {
@@ -149,8 +148,8 @@ class _TableInNestedNSReader extends fb.TableReader<TableInNestedNS> {
   const _TableInNestedNSReader();
 
   @override
-  TableInNestedNS createObject(fb.BufferContext bc, int offset) =>
-      TableInNestedNS._(bc, offset);
+  TableInNestedNS createObject(fb.BufferContext bc, int offset) => 
+    TableInNestedNS._(bc, offset);
 }
 
 class TableInNestedNSBuilder {
@@ -175,7 +174,10 @@ class TableInNestedNSBuilder {
 class TableInNestedNSObjectBuilder extends fb.ObjectBuilder {
   final int? _foo;
 
-  TableInNestedNSObjectBuilder({int? foo}) : _foo = foo;
+  TableInNestedNSObjectBuilder({
+    int? foo,
+  })
+      : _foo = foo;
 
   /// Finish building, and store into the [fbBuilder].
   @override
@@ -193,7 +195,6 @@ class TableInNestedNSObjectBuilder extends fb.ObjectBuilder {
     return fbBuilder.buffer;
   }
 }
-
 class StructInNestedNS {
   StructInNestedNS._(this._bc, this._bcOffset);
 
@@ -210,7 +211,9 @@ class StructInNestedNS {
     return 'StructInNestedNS{a: $a, b: $b}';
   }
 
-  StructInNestedNST unpack() => StructInNestedNST(a: a, b: b);
+  StructInNestedNST unpack() => StructInNestedNST(
+      a: a,
+      b: b);
 
   static int pack(fb.Builder fbBuilder, StructInNestedNST? object) {
     if (object == null) return 0;
@@ -222,7 +225,9 @@ class StructInNestedNST implements fb.Packable {
   int a;
   int b;
 
-  StructInNestedNST({required this.a, required this.b});
+  StructInNestedNST({
+      required this.a,
+      required this.b});
 
   @override
   int pack(fb.Builder fbBuilder) {
@@ -244,8 +249,8 @@ class _StructInNestedNSReader extends fb.StructReader<StructInNestedNS> {
   int get size => 8;
 
   @override
-  StructInNestedNS createObject(fb.BufferContext bc, int offset) =>
-      StructInNestedNS._(bc, offset);
+  StructInNestedNS createObject(fb.BufferContext bc, int offset) => 
+    StructInNestedNS._(bc, offset);
 }
 
 class StructInNestedNSBuilder {
@@ -258,15 +263,19 @@ class StructInNestedNSBuilder {
     fbBuilder.putInt32(a);
     return fbBuilder.offset;
   }
+
 }
 
 class StructInNestedNSObjectBuilder extends fb.ObjectBuilder {
   final int _a;
   final int _b;
 
-  StructInNestedNSObjectBuilder({required int a, required int b})
-    : _a = a,
-      _b = b;
+  StructInNestedNSObjectBuilder({
+    required int a,
+    required int b,
+  })
+      : _a = a,
+        _b = b;
 
   /// Finish building, and store into the [fbBuilder].
   @override

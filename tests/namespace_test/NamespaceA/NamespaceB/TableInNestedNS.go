@@ -11,9 +11,7 @@ type TableInNestedNST struct {
 }
 
 func (t *TableInNestedNST) Pack(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
-	if t == nil {
-		return 0
-	}
+	if t == nil { return 0 }
 	TableInNestedNSStart(builder)
 	TableInNestedNSAddFoo(builder, t.Foo)
 	return TableInNestedNSEnd(builder)
@@ -24,9 +22,7 @@ func (rcv *TableInNestedNS) UnPackTo(t *TableInNestedNST) {
 }
 
 func (rcv *TableInNestedNS) UnPack() *TableInNestedNST {
-	if rcv == nil {
-		return nil
-	}
+	if rcv == nil { return nil }
 	t := &TableInNestedNST{}
 	rcv.UnPackTo(t)
 	return t

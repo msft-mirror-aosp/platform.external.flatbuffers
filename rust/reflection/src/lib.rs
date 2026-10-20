@@ -84,7 +84,12 @@ pub unsafe fn get_field_integer<T: for<'a> Follow<'a, Inner = T> + PrimInt + Fro
     if size_of::<T>() != get_type_size(field.type_().base_type()) {
         return Err(FlatbufferError::FieldTypeMismatch(
             std::any::type_name::<T>().to_string(),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -104,7 +109,12 @@ pub unsafe fn get_field_float<T: for<'a> Follow<'a, Inner = T> + Float>(
     if size_of::<T>() != get_type_size(field.type_().base_type()) {
         return Err(FlatbufferError::FieldTypeMismatch(
             std::any::type_name::<T>().to_string(),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -124,7 +134,12 @@ pub unsafe fn get_field_string<'a>(
     if field.type_().base_type() != BaseType::String {
         return Err(FlatbufferError::FieldTypeMismatch(
             String::from("String"),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -145,7 +160,12 @@ pub unsafe fn get_field_struct<'a>(
     if field.type_().base_type() != BaseType::Obj {
         return Err(FlatbufferError::FieldTypeMismatch(
             String::from("Obj"),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -166,7 +186,12 @@ pub unsafe fn get_field_vector<'a, T: Follow<'a, Inner = T>>(
     {
         return Err(FlatbufferError::FieldTypeMismatch(
             std::any::type_name::<T>().to_string(),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -185,7 +210,12 @@ pub unsafe fn get_field_table<'a>(
     if field.type_().base_type() != BaseType::Obj {
         return Err(FlatbufferError::FieldTypeMismatch(
             String::from("Obj"),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -252,7 +282,12 @@ pub unsafe fn get_field_struct_in_struct<'a>(
     if field.type_().base_type() != BaseType::Obj {
         return Err(FlatbufferError::FieldTypeMismatch(
             String::from("Obj"),
-            field.type_().base_type().variant_name().unwrap_or_default().to_string(),
+            field
+                .type_()
+                .base_type()
+                .variant_name()
+                .unwrap_or_default()
+                .to_string(),
         ));
     }
 
@@ -407,13 +442,15 @@ pub unsafe fn set_field<T: EndianScalar>(
     };
 
     if buf.len() < field_loc.saturating_add(get_type_size(field_type)) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: field_loc,
-                end: field_loc.saturating_add(get_type_size(field_type)),
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: field_loc,
+                    end: field_loc.saturating_add(get_type_size(field_type)),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
 
     // SAFETY: the buffer range was verified above.
@@ -451,37 +488,49 @@ pub unsafe fn set_string(
     };
 
     if buf.len() < field_loc + get_type_size(field_type) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: field_loc,
-                end: field_loc.saturating_add(get_type_size(field_type)),
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: field_loc,
+                    end: field_loc.saturating_add(get_type_size(field_type)),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
 
     // SAFETY: the buffer range was verified above.
     let string_loc = unsafe { deref_uoffset(buf, field_loc)? };
     if buf.len() < string_loc.saturating_add(SIZE_UOFFSET) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: string_loc,
-                end: string_loc.saturating_add(SIZE_UOFFSET),
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: string_loc,
+                    end: string_loc.saturating_add(SIZE_UOFFSET),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
 
     // SAFETY: the buffer range was verified above.
     let len_old = unsafe { read_uoffset(buf, string_loc) };
-    if buf.len() < string_loc.saturating_add(SIZE_UOFFSET).saturating_add(len_old.try_into()?) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: string_loc,
-                end: string_loc.saturating_add(SIZE_UOFFSET).saturating_add(len_old.try_into()?),
+    if buf.len()
+        < string_loc
+            .saturating_add(SIZE_UOFFSET)
+            .saturating_add(len_old.try_into()?)
+    {
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: string_loc,
+                    end: string_loc
+                        .saturating_add(SIZE_UOFFSET)
+                        .saturating_add(len_old.try_into()?),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
 
     let len_new = v.len();
@@ -579,7 +628,9 @@ unsafe fn get_any_value_integer(
         BaseType::ULong => i64::from_u64(u64::follow(buf, loc)),
         BaseType::Float => i64::from_f32(f32::follow(buf, loc)),
         BaseType::Double => i64::from_f64(f64::follow(buf, loc)),
-        BaseType::String => ForwardsUOffset::<&str>::follow(buf, loc).parse::<i64>().ok(),
+        BaseType::String => ForwardsUOffset::<&str>::follow(buf, loc)
+            .parse::<i64>()
+            .ok(),
         _ => None, // Tables & vectors do not make sense.
     }
     .ok_or(FlatbufferError::FieldTypeMismatch(
@@ -610,7 +661,9 @@ unsafe fn get_any_value_float(
         BaseType::ULong => f64::from_u64(u64::follow(buf, loc)),
         BaseType::Float => f64::from_f32(f32::follow(buf, loc)),
         BaseType::Double => Some(f64::follow(buf, loc)),
-        BaseType::String => ForwardsUOffset::<&str>::follow(buf, loc).parse::<f64>().ok(),
+        BaseType::String => ForwardsUOffset::<&str>::follow(buf, loc)
+            .parse::<f64>()
+            .ok(),
         _ => None,
     }
     .ok_or(FlatbufferError::FieldTypeMismatch(
@@ -632,9 +685,9 @@ unsafe fn get_any_value_string(
     type_index: usize,
 ) -> String {
     match base_type {
-        BaseType::Float | BaseType::Double => {
-            get_any_value_float(base_type, buf, loc).unwrap_or_default().to_string()
-        }
+        BaseType::Float | BaseType::Double => get_any_value_float(base_type, buf, loc)
+            .unwrap_or_default()
+            .to_string(),
         BaseType::String => {
             String::from_utf8_lossy(ForwardsUOffset::<&[u8]>::follow(buf, loc)).to_string()
         }
@@ -675,7 +728,9 @@ unsafe fn get_any_value_string(
         }
         BaseType::Vector => String::from("[(elements)]"), // TODO inherited from C++: implement this as well.
         BaseType::Union => String::from("(union)"), // TODO inherited from C++: implement this as well.
-        _ => get_any_value_integer(base_type, buf, loc).unwrap_or_default().to_string(),
+        _ => get_any_value_integer(base_type, buf, loc)
+            .unwrap_or_default()
+            .to_string(),
     }
 }
 
@@ -687,13 +742,15 @@ fn set_any_value_integer(
     v: i64,
 ) -> FlatbufferResult<()> {
     if buf.len() < get_type_size(base_type) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: field_loc,
-                end: field_loc.saturating_add(get_type_size(base_type)),
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: field_loc,
+                    end: field_loc.saturating_add(get_type_size(base_type)),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
     let buf = &mut buf[field_loc..];
     let type_name = base_type.variant_name().unwrap_or_default().to_string();
@@ -704,7 +761,10 @@ fn set_any_value_integer(
                 // SAFETY: buffer size is verified at the beginning of this function.
                 unsafe { Ok(emplace_scalar::<$ty>(buf, v)) }
             } else {
-                Err(FlatbufferError::FieldTypeMismatch(String::from("i64"), type_name))
+                Err(FlatbufferError::FieldTypeMismatch(
+                    String::from("i64"),
+                    type_name,
+                ))
             }
         };
     }
@@ -744,7 +804,10 @@ fn set_any_value_integer(
                 // SAFETY: buffer size is verified at the beginning of this function.
                 unsafe { Ok(emplace_scalar::<f32>(buf, value)) }
             } else {
-                Err(FlatbufferError::FieldTypeMismatch(String::from("i64"), type_name))
+                Err(FlatbufferError::FieldTypeMismatch(
+                    String::from("i64"),
+                    type_name,
+                ))
             }
         }
         BaseType::Double => {
@@ -752,7 +815,10 @@ fn set_any_value_integer(
                 // SAFETY: buffer size is verified at the beginning of this function.
                 unsafe { Ok(emplace_scalar::<f64>(buf, value)) }
             } else {
-                Err(FlatbufferError::FieldTypeMismatch(String::from("i64"), type_name))
+                Err(FlatbufferError::FieldTypeMismatch(
+                    String::from("i64"),
+                    type_name,
+                ))
             }
         }
         _ => Err(FlatbufferError::SetValueNotSupported),
@@ -767,13 +833,15 @@ fn set_any_value_float(
     v: f64,
 ) -> FlatbufferResult<()> {
     if buf.len() < get_type_size(base_type) {
-        return Err(FlatbufferError::VerificationError(InvalidFlatbuffer::RangeOutOfBounds {
-            range: core::ops::Range {
-                start: field_loc,
-                end: field_loc.saturating_add(get_type_size(base_type)),
+        return Err(FlatbufferError::VerificationError(
+            InvalidFlatbuffer::RangeOutOfBounds {
+                range: core::ops::Range {
+                    start: field_loc,
+                    end: field_loc.saturating_add(get_type_size(base_type)),
+                },
+                error_trace: Default::default(),
             },
-            error_trace: Default::default(),
-        }));
+        ));
     }
     let buf = &mut buf[field_loc..];
     let type_name = base_type.variant_name().unwrap_or_default().to_string();
@@ -868,7 +936,10 @@ fn set_any_value_float(
         }
         _ => return Err(FlatbufferError::SetValueNotSupported),
     }
-    return Err(FlatbufferError::FieldTypeMismatch(String::from("f64"), type_name));
+    return Err(FlatbufferError::FieldTypeMismatch(
+        String::from("f64"),
+        type_name,
+    ));
 }
 
 fn is_scalar(base_type: BaseType) -> bool {
@@ -931,7 +1002,10 @@ unsafe fn update_offset(
         }
 
         if field_type == BaseType::Obj
-            && schema.objects().get(field.type_().index().try_into()?).is_struct()
+            && schema
+                .objects()
+                .get(field.type_().index().try_into()?)
+                .is_struct()
         {
             continue;
         }
@@ -967,7 +1041,10 @@ unsafe fn update_offset(
                     continue;
                 }
                 if elem_type == BaseType::Obj
-                    && schema.objects().get(field.type_().index().try_into()?).is_struct()
+                    && schema
+                        .objects()
+                        .get(field.type_().index().try_into()?)
+                        .is_struct()
                 {
                     continue;
                 }

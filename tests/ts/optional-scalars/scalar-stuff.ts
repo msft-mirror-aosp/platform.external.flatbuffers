@@ -209,7 +209,7 @@ defaultEnum():OptionalByte {
   return offset ? this.bb!.readInt8(this.bb_pos + offset) : OptionalByte.One;
 }
 
-static getFullyQualifiedName(): "optional_scalars.ScalarStuff" {
+static getFullyQualifiedName():string {
   return 'optional_scalars.ScalarStuff';
 }
 
