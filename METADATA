@@ -6,18 +6,19 @@ name: "flatbuffers"
 description: "FlatBuffers is an efficient cross platform serialization library for C++, C#, C, Go, Java, JavaScript, TypeScript, PHP, and Python."
 third_party {
   license_type: NOTICE
+  security {
+    tag: "NVD-CPE2.3:cpe:/a:google:flatbuffers:25.9.23"
+  }
   last_upgrade_date {
-    year: 2025
-    month: 2
-    day: 4
+    year: 2026
+    month: 9
+    day: 14
   }
   homepage: "http://google.github.io/flatbuffers/"
   identifier {
     type: "Git"
     value: "https://github.com/google/flatbuffers.git"
-    version: "c49e81d6ec60d411f9d5cd9b748b8f86af154922"
-  }
-  security: {
-    tag: "NVD-CPE2.3:cpe:/a:google:flatbuffers:25.1.24"
+    version: "187240970746d00bbd26b0f5873ed54d2477f9f3"
+    closest_version: "v25.9.23"
   }
 }
